@@ -1,0 +1,2937 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GTC — Gestión de Tarjetas de Crédito</title>
+<style>
+/* ══════════════════════════════════════════════════════
+   DESIGN TOKENS
+   ══════════════════════════════════════════════════════ */
+:root {
+  --bg-base:      #0B0F1A;
+  --bg-surface:   #111827;
+  --bg-card:      #1a2236;
+  --bg-input:     #0d1525;
+  --border:       #1e2d45;
+  --border-light: #263654;
+
+  --accent:       #3b82f6;
+  --accent-glow:  rgba(59,130,246,0.18);
+  --accent-hover: #60a5fa;
+
+  --text-primary: #e2e8f0;
+  --text-muted:   #64748b;
+  --text-label:   #94a3b8;
+
+  --yellow:  #f59e0b; --yellow-bg: rgba(245,158,11,0.12);
+  --green:   #10b981; --green-bg:  rgba(16,185,129,0.12);
+  --red:     #ef4444; --red-bg:    rgba(239,68,68,0.12);
+  --blue:    #3b82f6; --blue-bg:   rgba(59,130,246,0.12);
+  --orange:  #f97316; --orange-bg: rgba(249,115,22,0.12);
+  --purple:  #8b5cf6; --purple-bg: rgba(139,92,246,0.12);
+
+  --radius-sm: 6px; --radius: 10px; --radius-lg: 14px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ══════════════════════════════════════════════════════
+   RESET & BASE
+   ══════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+  font-size: 14px;
+}
+a { color: var(--accent); text-decoration: none; }
+img { max-width: 100%; }
+button { cursor: pointer; font-family: var(--font); }
+input, select, textarea { font-family: var(--font); }
+
+/* ══════════════════════════════════════════════════════
+   LAYOUT
+   ══════════════════════════════════════════════════════ */
+#app { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: 240px; flex-shrink: 0;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; height: 100vh;
+  z-index: 100; transition: transform .25s;
+}
+.sidebar-logo {
+  padding: 22px 20px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.sidebar-logo .logo-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.sidebar-logo h1 { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.sidebar-logo span { font-size: 10px; color: var(--text-muted); display: block; margin-top: 1px; }
+
+.sidebar-user {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.user-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13px; color: #fff; flex-shrink: 0;
+}
+.user-info .user-name  { font-size: 13px; font-weight: 600; }
+.user-info .user-role  { font-size: 11px; color: var(--text-muted); text-transform: capitalize; }
+
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 10px 0; }
+.nav-section-label {
+  font-size: 10px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .08em;
+  padding: 12px 20px 4px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px; color: var(--text-muted);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all .15s; border: none; background: none;
+  width: 100%; text-align: left;
+}
+.nav-item:hover { color: var(--text-primary); background: var(--accent-glow); }
+.nav-item.active {
+  color: var(--accent);
+  background: var(--accent-glow);
+  border-right: 2px solid var(--accent);
+}
+.nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+.sidebar-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+.btn-logout {
+  width: 100%; padding: 8px; border-radius: var(--radius-sm);
+  background: transparent; border: 1px solid var(--border-light);
+  color: var(--text-muted); font-size: 12px; transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-logout:hover { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+
+/* Main content */
+.main-content {
+  margin-left: 240px; flex: 1;
+  display: flex; flex-direction: column;
+  min-height: 100vh;
+}
+.topbar {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar-title { font-size: 18px; font-weight: 700; }
+.topbar-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+.topbar-actions { display: flex; gap: 8px; align-items: center; }
+
+.page-content { padding: 28px; flex: 1; }
+
+/* Mobile hamburger */
+.hamburger {
+  display: none; background: none; border: none;
+  color: var(--text-primary); font-size: 22px; cursor: pointer;
+}
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); z-index: 99;
+}
+.overlay.show { display: block; }
+
+/* ══════════════════════════════════════════════════════
+   LOGIN
+   ══════════════════════════════════════════════════════ */
+#login-screen {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; background: var(--bg-base);
+  background-image: radial-gradient(ellipse at 20% 50%, rgba(59,130,246,0.06) 0%, transparent 60%),
+                    radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.06) 0%, transparent 60%);
+}
+.login-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  width: 100%; max-width: 400px;
+  box-shadow: var(--shadow);
+}
+.login-logo {
+  text-align: center; margin-bottom: 28px;
+}
+.login-logo .logo-circle {
+  width: 56px; height: 56px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; margin: 0 auto 12px;
+}
+.login-logo h2 { font-size: 20px; font-weight: 700; }
+.login-logo p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+.login-quick { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 20px; }
+.quick-btn {
+  padding: 8px 6px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light); background: var(--bg-input);
+  color: var(--text-label); font-size: 11px; text-align: center;
+  cursor: pointer; transition: all .15s;
+}
+.quick-btn:hover { border-color: var(--accent); color: var(--accent); }
+.quick-btn span { display: block; font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* ══════════════════════════════════════════════════════
+   COMPONENTS — Buttons
+   ══════════════════════════════════════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; border: none;
+  transition: all .15s; white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-secondary { background: var(--bg-card); border: 1px solid var(--border-light); color: var(--text-label); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-success { background: var(--green); color: #fff; }
+.btn-success:hover { opacity: .85; }
+.btn-danger  { background: var(--red); color: #fff; }
+.btn-danger:hover  { opacity: .85; }
+.btn-warning { background: var(--orange); color: #fff; }
+.btn-warning:hover { opacity: .85; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-xs { padding: 4px 8px; font-size: 11px; }
+.btn-icon { padding: 8px; }
+.btn-ghost { background: transparent; border: 1px solid var(--border-light); color: var(--text-muted); }
+.btn-ghost:hover { background: var(--accent-glow); color: var(--accent); border-color: var(--accent); }
+
+/* ══════════════════════════════════════════════════════
+   COMPONENTS — Forms
+   ══════════════════════════════════════════════════════ */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: var(--text-label); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em;
+}
+.form-label .req { color: var(--red); margin-left: 2px; }
+.form-control {
+  width: 100%; padding: 10px 12px;
+  background: var(--bg-input); border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm); color: var(--text-primary);
+  font-size: 13px; transition: border-color .15s;
+  appearance: none;
+}
+.form-control:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.form-control::placeholder { color: var(--text-muted); }
+textarea.form-control { resize: vertical; min-height: 90px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.form-error { color: var(--red); font-size: 11px; margin-top: 4px; }
+
+.file-drop {
+  border: 2px dashed var(--border-light); border-radius: var(--radius);
+  padding: 24px; text-align: center; cursor: pointer; transition: all .15s;
+  background: var(--bg-input);
+}
+.file-drop:hover, .file-drop.dragover { border-color: var(--accent); background: var(--accent-glow); }
+.file-drop .file-icon { font-size: 28px; margin-bottom: 8px; }
+.file-drop p { font-size: 13px; color: var(--text-muted); }
+.file-drop strong { color: var(--accent); }
+.file-preview { margin-top: 10px; }
+.file-preview img { max-height: 160px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.file-preview .pdf-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; background: var(--red-bg); color: var(--red);
+  border-radius: var(--radius-sm); font-size: 12px; font-weight: 600;
+}
+
+/* ══════════════════════════════════════════════════════
+   COMPONENTS — Cards & Stats
+   ══════════════════════════════════════════════════════ */
+.card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+}
+.card-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.card-title { font-size: 14px; font-weight: 700; }
+.card-body { padding: 20px; }
+
+.stat-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+.stat-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 18px 20px;
+  position: relative; overflow: hidden;
+}
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--stat-accent, var(--accent));
+}
+.stat-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+.stat-value { font-size: 26px; font-weight: 800; margin: 6px 0 2px; color: var(--text-primary); }
+.stat-sub { font-size: 11px; color: var(--text-muted); }
+.stat-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 28px; opacity: .15; }
+
+/* ══════════════════════════════════════════════════════
+   COMPONENTS — Table
+   ══════════════════════════════════════════════════════ */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead tr { border-bottom: 1px solid var(--border-light); }
+thead th {
+  padding: 10px 14px; text-align: left;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--text-muted);
+}
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+tbody tr:hover { background: rgba(59,130,246,0.04); }
+tbody td { padding: 12px 14px; }
+.table-actions { display: flex; gap: 6px; }
+
+/* ══════════════════════════════════════════════════════
+   COMPONENTS — Badges
+   ══════════════════════════════════════════════════════ */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+}
+.badge::before { content: '●'; font-size: 8px; }
+.badge-yellow { background: var(--yellow-bg); color: var(--yellow); }
+.badge-green  { background: var(--green-bg);  color: var(--green);  }
+.badge-red    { background: var(--red-bg);    color: var(--red);    }
+.badge-blue   { background: var(--blue-bg);   color: var(--blue);   }
+.badge-orange { background: var(--orange-bg); color: var(--orange); }
+.badge-gray   { background: rgba(100,116,139,.12); color: var(--text-muted); }
+.badge-purple { background: var(--purple-bg); color: var(--purple); }
+
+/* ══════════════════════════════════════════════════════
+   COMPONENTS — Modal
+   ══════════════════════════════════════════════════════ */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  z-index: 200; display: flex; align-items: center; justify-content: center;
+  padding: 20px; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.modal-backdrop.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--bg-card); border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg); width: 100%; max-width: 580px;
+  max-height: 90vh; overflow-y: auto;
+  transform: translateY(16px); transition: transform .2s;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.modal-backdrop.open .modal { transform: translateY(0); }
+.modal-header {
+  padding: 18px 22px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; background: var(--bg-card); z-index: 1;
+}
+.modal-title { font-size: 15px; font-weight: 700; }
+.modal-close {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 20px; cursor: pointer; line-height: 1;
+  padding: 4px; border-radius: 4px; transition: color .15s;
+}
+.modal-close:hover { color: var(--red); }
+.modal-body { padding: 22px; }
+.modal-footer {
+  padding: 16px 22px; border-top: 1px solid var(--border);
+  display: flex; gap: 8px; justify-content: flex-end;
+}
+
+/* ══════════════════════════════════════════════════════
+   COMPONENTS — Toast
+   ══════════════════════════════════════════════════════ */
+#toast-container {
+  position: fixed; bottom: 24px; right: 24px;
+  z-index: 999; display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 18px; border-radius: var(--radius);
+  background: var(--bg-card); border: 1px solid var(--border-light);
+  box-shadow: var(--shadow); font-size: 13px; font-weight: 500;
+  max-width: 340px; pointer-events: all;
+  animation: slideIn .25s ease-out;
+}
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error   { border-left: 3px solid var(--red);   }
+.toast.info    { border-left: 3px solid var(--blue);   }
+.toast.warning { border-left: 3px solid var(--orange); }
+@keyframes slideIn {
+  from { transform: translateX(20px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* ══════════════════════════════════════════════════════
+   COMPONENTS — Notification preview
+   ══════════════════════════════════════════════════════ */
+.notif-preview {
+  background: var(--bg-input); border: 1px solid var(--border-light);
+  border-radius: var(--radius); padding: 14px; margin-top: 12px;
+}
+.notif-preview h4 { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .05em; }
+.notif-wa { color: var(--green); font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+.notif-email { color: var(--text-label); font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+
+/* ══════════════════════════════════════════════════════
+   TIMELINE
+   ══════════════════════════════════════════════════════ */
+.timeline { list-style: none; position: relative; padding: 0; }
+.timeline::before {
+  content: ''; position: absolute; left: 7px; top: 0; bottom: 0;
+  width: 2px; background: var(--border-light);
+}
+.timeline-item { position: relative; padding: 0 0 14px 24px; }
+.timeline-item::before {
+  content: ''; position: absolute; left: 0; top: 4px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--accent-glow); border: 2px solid var(--accent);
+}
+.timeline-date { font-size: 11px; color: var(--text-muted); }
+.timeline-action { font-size: 13px; color: var(--text-primary); margin-top: 2px; }
+.timeline-user { font-size: 11px; color: var(--accent); margin-top: 1px; }
+
+/* ══════════════════════════════════════════════════════
+   SECTION — Empty state
+   ══════════════════════════════════════════════════════ */
+.empty-state {
+  text-align: center; padding: 48px 24px;
+}
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 14px; opacity: .4; }
+.empty-state h3 { font-size: 15px; color: var(--text-label); margin-bottom: 6px; }
+.empty-state p  { font-size: 13px; color: var(--text-muted); }
+
+/* ══════════════════════════════════════════════════════
+   PAGE — Dashboard
+   ══════════════════════════════════════════════════════ */
+.dashboard-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+}
+.welcome-text h2 { font-size: 22px; font-weight: 800; }
+.welcome-text p  { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+
+/* ══════════════════════════════════════════════════════
+   PAGE — Filters
+   ══════════════════════════════════════════════════════ */
+.filters-bar {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  margin-bottom: 16px;
+}
+.filters-bar .form-control { max-width: 160px; padding: 8px 10px; }
+.filters-bar select.form-control { max-width: 130px; }
+
+/* ══════════════════════════════════════════════════════
+   PAGE — Config
+   ══════════════════════════════════════════════════════ */
+.config-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.config-tab {
+  padding: 10px 18px; font-size: 13px; font-weight: 600;
+  color: var(--text-muted); border: none; background: none;
+  cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s;
+}
+.config-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.config-tab:hover { color: var(--text-primary); }
+.config-panel { display: none; }
+.config-panel.active { display: block; }
+.template-vars { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.var-chip {
+  padding: 3px 10px; background: var(--accent-glow); color: var(--accent);
+  border-radius: 20px; font-size: 11px; font-family: monospace;
+  cursor: pointer; transition: all .15s;
+}
+.var-chip:hover { background: var(--accent); color: #fff; }
+
+/* ══════════════════════════════════════════════════════
+   PAGE — Reports
+   ══════════════════════════════════════════════════════ */
+.report-summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.report-summary-card {
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px; text-align: center;
+}
+.report-summary-card .rs-value { font-size: 22px; font-weight: 800; }
+.report-summary-card .rs-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main-content { margin-left: 0; }
+  .hamburger { display: block; }
+  .form-row, .form-row-3 { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .page-content { padding: 16px; }
+  .filters-bar .form-control { max-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN SCREEN ══════════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-circle">💳</div>
+      <h2>GTC</h2>
+      <p>Sistema de Gestión de Tarjetas de Crédito</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Correo electrónico</label>
+      <input type="email" id="login-email" class="form-control" placeholder="usuario@empresa.com" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Contraseña</label>
+      <input type="password" id="login-pass" class="form-control" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div id="login-error" class="form-error" style="margin-bottom:10px;"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;" onclick="doLogin()">Ingresar →</button>
+    <p style="font-size:11px;color:var(--border-light);text-align:center;margin-top:18px;cursor:default;user-select:none;" title="Contacta al administrador del sistema para obtener tus credenciales de acceso.">
+      ¿Sin acceso? Contacta al administrador del sistema.
+    </p>
+  </div>
+</div>
+
+<!-- ══ APP SHELL ═════════════════════════════════════════════════════════ -->
+<div id="app" style="display:none;">
+  <!-- Overlay mobile -->
+  <div class="overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">💳</div>
+      <div>
+        <h1>GTC Sistema</h1>
+        <span>Gestión Tarjetas</span>
+      </div>
+    </div>
+    <div class="sidebar-user" id="sidebar-user"></div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="doLogout()">🚪 Cerrar sesión</button>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button class="hamburger" onclick="openSidebar()">☰</button>
+        <div>
+          <div class="topbar-title" id="page-title">Dashboard</div>
+          <div class="topbar-sub" id="page-sub"></div>
+        </div>
+      </div>
+      <div class="topbar-actions" id="topbar-actions"></div>
+    </header>
+
+    <main class="page-content" id="page-content">
+      <!-- Pages rendered dynamically -->
+    </main>
+  </div>
+</div>
+
+<!-- ══ MODALS CONTAINER ══════════════════════════════════════════════════ -->
+<div id="modal-container"></div>
+
+<!-- ══ TOAST ═════════════════════════════════════════════════════════════ -->
+<div id="toast-container"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     SCRIPTS
+     ══════════════════════════════════════════════════ -->
+<script>
+/**
+ * DATA LAYER - Gestión Tarjetas de Crédito
+ * Simulated data + LocalStorage persistence
+ * Designed for easy migration to REST API / Firebase / Supabase
+ */
+
+const DB = {
+  // ─── Keys ───────────────────────────────────────────────────────────────
+  KEYS: {
+    SOLICITUDES: 'gtc_solicitudes',
+    USUARIOS:    'gtc_usuarios',
+    CONFIG:      'gtc_config',
+    SESSION:     'gtc_session',
+    VERSION:     'gtc_version',
+  },
+
+  // Bump this when seed data changes to force a clean reset on existing browsers
+  DATA_VERSION: '2.0',
+
+  // ─── Seed data — LIMPIO para producción ─────────────────────────────────
+  SEED_USUARIOS: [
+    {
+      id: 'u1',
+      nombre: 'Administrador',
+      email: 'admin@empresa.com',
+      whatsapp: '',
+      rol: 'admin',
+      password: 'admin2024',
+      activo: true,
+    },
+  ],
+
+  SEED_SOLICITUDES: [],   // Sin datos demo — inicia limpio
+
+  SEED_CONFIG: {
+    whatsapp: {
+      numeroFinanzas: '',
+      plantillaAprobacion: 'Hola {{solicitante}}, tu solicitud para el proyecto *{{proyecto}}* ha sido *APROBADA* ✅\n\n📋 *Detalles:*\n• Monto: {{moneda}} {{monto}}\n• Asunto: {{asunto}}\n• Fecha: {{fecha}}\n\nCoordina la entrega física de la tarjeta con Finanzas.',
+      plantillaRechazo: 'Hola {{solicitante}}, lamentamos informarte que tu solicitud para *{{proyecto}}* ha sido *RECHAZADA* ❌\n\n📋 *Detalles:*\n• Monto: {{moneda}} {{monto}}\n• Asunto: {{asunto}}\n• Fecha: {{fecha}}\n\nContacta a Finanzas para más información.',
+      plantillaCierre: 'Hola {{solicitante}}, tu solicitud *{{proyecto}}* ha sido *CERRADA* 🔒\n\n📋 *Resumen:*\n• Monto aprobado: {{moneda}} {{monto}}\n• Monto consumido: {{moneda}} {{montoConsumido}}\n• Fecha cierre: {{fecha}}\n\nGracias por completar el proceso.',
+    },
+    email: {
+      correoFinanzas: '',
+      asuntoAprobacion: '[Tarjeta Crédito] Solicitud Aprobada - {{proyecto}}',
+      asuntoRechazo: '[Tarjeta Crédito] Solicitud Rechazada - {{proyecto}}',
+      asuntoCierre: '[Tarjeta Crédito] Solicitud Cerrada - {{proyecto}}',
+      cuerpoAprobacion: 'Estimado/a {{solicitante}},\n\nNos complace informarle que su solicitud de tarjeta de crédito ha sido APROBADA.\n\nDetalles:\n- Proyecto: {{proyecto}}\n- Moneda: {{moneda}}\n- Monto: {{monto}}\n- Asunto: {{asunto}}\n- Fecha de decisión: {{fecha}}\n\nPor favor coordine la entrega física de la tarjeta con el equipo de Finanzas.\n\n{{firma}}',
+      cuerpoRechazo: 'Estimado/a {{solicitante}},\n\nLamentamos informarle que su solicitud de tarjeta de crédito ha sido RECHAZADA.\n\nDetalles:\n- Proyecto: {{proyecto}}\n- Moneda: {{moneda}}\n- Monto: {{monto}}\n- Asunto: {{asunto}}\n- Fecha de decisión: {{fecha}}\n\nPara más información, por favor contacte directamente al equipo de Finanzas.\n\n{{firma}}',
+      firma: 'Atentamente,\nDepartamento de Finanzas\n',
+    },
+    proyectos: [],
+    monedas: ['USD', 'PEN', 'EUR'],
+    tarjetas: [],
+  },
+
+  // ─── Init — limpia datos viejos si la versión cambió ─────────────────────
+  init() {
+    const stored = localStorage.getItem(this.KEYS.VERSION);
+    if (stored !== this.DATA_VERSION) {
+      // Nueva versión: borrar todo y sembrar limpio
+      Object.values(this.KEYS).forEach(k => localStorage.removeItem(k));
+      localStorage.setItem(this.KEYS.VERSION, this.DATA_VERSION);
+    }
+    if (!localStorage.getItem(this.KEYS.USUARIOS)) {
+      localStorage.setItem(this.KEYS.USUARIOS, JSON.stringify(this.SEED_USUARIOS));
+    }
+    if (!localStorage.getItem(this.KEYS.SOLICITUDES)) {
+      localStorage.setItem(this.KEYS.SOLICITUDES, JSON.stringify(this.SEED_SOLICITUDES));
+    }
+    if (!localStorage.getItem(this.KEYS.CONFIG)) {
+      localStorage.setItem(this.KEYS.CONFIG, JSON.stringify(this.SEED_CONFIG));
+    }
+  },
+
+  reset() {
+    Object.values(this.KEYS).forEach(k => localStorage.removeItem(k));
+    this.init();
+  },
+
+  // ─── CRUD Solicitudes ────────────────────────────────────────────────────
+  getSolicitudes()    { return JSON.parse(localStorage.getItem(this.KEYS.SOLICITUDES)) || []; },
+  getSolicitud(id)    { return this.getSolicitudes().find(s => s.id === id); },
+
+  saveSolicitud(sol) {
+    const list = this.getSolicitudes();
+    const idx = list.findIndex(s => s.id === sol.id);
+    if (idx >= 0) list[idx] = sol; else list.push(sol);
+    localStorage.setItem(this.KEYS.SOLICITUDES, JSON.stringify(list));
+    return sol;
+  },
+
+  nextId() {
+    const list = this.getSolicitudes();
+    const nums = list.map(s => parseInt(s.id.replace('SOL-', ''))).filter(Boolean);
+    const next = nums.length ? Math.max(...nums) + 1 : 1;
+    return `SOL-${String(next).padStart(3, '0')}`;
+  },
+
+  // ─── CRUD Usuarios ───────────────────────────────────────────────────────
+  getUsuarios()       { return JSON.parse(localStorage.getItem(this.KEYS.USUARIOS)) || []; },
+  getUsuario(id)      { return this.getUsuarios().find(u => u.id === id); },
+  getUserByEmail(em)  { return this.getUsuarios().find(u => u.email === em); },
+
+  saveUsuario(u) {
+    const list = this.getUsuarios();
+    const idx = list.findIndex(x => x.id === u.id);
+    if (idx >= 0) list[idx] = u; else list.push(u);
+    localStorage.setItem(this.KEYS.USUARIOS, JSON.stringify(list));
+    return u;
+  },
+
+  // ─── Config ──────────────────────────────────────────────────────────────
+  getConfig()         { return JSON.parse(localStorage.getItem(this.KEYS.CONFIG)) || {}; },
+  saveConfig(cfg)     { localStorage.setItem(this.KEYS.CONFIG, JSON.stringify(cfg)); },
+
+  // ─── Session ─────────────────────────────────────────────────────────────
+  getSession()        { return JSON.parse(sessionStorage.getItem(this.KEYS.SESSION)); },
+  setSession(user)    { sessionStorage.setItem(this.KEYS.SESSION, JSON.stringify(user)); },
+  clearSession()      { sessionStorage.removeItem(this.KEYS.SESSION); },
+
+  // ─── Reporting helpers ───────────────────────────────────────────────────
+  getStats() {
+    const sols = this.getSolicitudes();
+    const montoSolicitado = sols.reduce((a, s) => a + (s.montoSolicitado || 0), 0);
+    const montoConsumido  = sols.reduce((a, s) => a + (s.montoConsumido  || 0), 0);
+    return {
+      total:             sols.length,
+      pendiente:         sols.filter(s => s.estado === 'pendiente').length,
+      aprobado:          sols.filter(s => s.estado === 'aprobado').length,
+      rechazado:         sols.filter(s => s.estado === 'rechazado').length,
+      tarjeta_entregada: sols.filter(s => s.estado === 'tarjeta_entregada').length,
+      validado:          sols.filter(s => ['validado', 'cerrado'].includes(s.estado)).length,
+      montoSolicitado,
+      montoConsumido,
+      balancePendiente:  sols.filter(s => !['validado','cerrado','rechazado'].includes(s.estado))
+                            .reduce((a,s) => a + (s.montoSolicitado||0), 0),
+    };
+  },
+};
+
+</script>
+<script>
+/**
+ * BUSINESS LOGIC LAYER - Gestión Tarjetas de Crédito
+ * Pure functions: no DOM manipulation here.
+ * Easy to port to Node.js / React / React Native.
+ */
+
+const BL = {
+
+  // ─── Auth ────────────────────────────────────────────────────────────────
+  login(email, password) {
+    const user = DB.getUserByEmail(email.trim().toLowerCase());
+    if (!user) return { ok: false, error: 'Usuario no encontrado' };
+    if (user.password !== password) return { ok: false, error: 'Contraseña incorrecta' };
+    if (!user.activo) return { ok: false, error: 'Usuario inactivo' };
+    DB.setSession(user);
+    return { ok: true, user };
+  },
+
+  logout() { DB.clearSession(); },
+
+  currentUser() { return DB.getSession(); },
+
+  can(action, sol = null) {
+    const u = this.currentUser();
+    if (!u) return false;
+    const rol = u.rol;
+    const permisos = {
+      admin:       ['*'],
+      finanzas:    ['ver_todas','aprobar','rechazar','entregar','validar','observar','ver_config','ver_reportes'],
+      solicitante: ['crear','ver_propias','cerrar','subir_docs'],
+    };
+    const p = permisos[rol] || [];
+    if (p.includes('*')) return true;
+    if (p.includes(action)) {
+      if (action === 'ver_propias' && sol) return sol.solicitanteId === u.id;
+      return true;
+    }
+    return false;
+  },
+
+  // ─── Solicitudes ─────────────────────────────────────────────────────────
+  crearSolicitud({ solicitante, proyecto, moneda, montoSolicitado, asunto, fechaSolicitud }) {
+    const u = this.currentUser();
+    const sol = {
+      id: DB.nextId(),
+      solicitanteId: u.id,
+      solicitante,
+      proyecto,
+      moneda,
+      montoSolicitado: parseFloat(montoSolicitado),
+      asunto,
+      fechaSolicitud,
+      estado: 'pendiente',
+      fechaDecision: null,
+      responsableFinanzas: null,
+      fechaEntrega: null,
+      comentariosFinanzas: null,
+      montoConsumido: null,
+      fechaCierre: null,
+      comentarioCierre: null,
+      factura: null,
+      voucher: null,
+      evidencias: [],
+      historial: [{ fecha: this._now(), accion: 'Solicitud creada', usuario: u.nombre }],
+    };
+    DB.saveSolicitud(sol);
+    return sol;
+  },
+
+  aprobarSolicitud(id, comentario = '') {
+    const sol = DB.getSolicitud(id);
+    const u   = this.currentUser();
+    sol.estado             = 'aprobado';
+    sol.fechaDecision      = this._now();
+    sol.responsableFinanzas = u.nombre;
+    sol.comentariosFinanzas = comentario;
+    sol.historial.push({ fecha: this._now(), accion: 'Aprobada por Finanzas', usuario: u.nombre });
+    DB.saveSolicitud(sol);
+    this._notificar(sol, 'aprobacion');
+    return sol;
+  },
+
+  rechazarSolicitud(id, comentario = '') {
+    const sol = DB.getSolicitud(id);
+    const u   = this.currentUser();
+    sol.estado             = 'rechazado';
+    sol.fechaDecision      = this._now();
+    sol.responsableFinanzas = u.nombre;
+    sol.comentariosFinanzas = comentario;
+    sol.historial.push({ fecha: this._now(), accion: 'Rechazada por Finanzas', usuario: u.nombre });
+    DB.saveSolicitud(sol);
+    this._notificar(sol, 'rechazo');
+    return sol;
+  },
+
+  marcarEntregada(id, { responsable, fechaEntrega, comentario, numeroTarjeta }) {
+    const sol = DB.getSolicitud(id);
+    const u   = this.currentUser();
+    sol.estado             = 'tarjeta_entregada';
+    sol.responsableFinanzas = responsable;
+    sol.fechaEntrega       = fechaEntrega;
+    sol.comentariosFinanzas = comentario;
+    sol.numeroTarjeta      = numeroTarjeta || null;
+    sol.historial.push({ fecha: this._now(), accion: `Tarjeta entregada físicamente${numeroTarjeta ? ' (' + numeroTarjeta + ')' : ''}`, usuario: u.nombre });
+    DB.saveSolicitud(sol);
+    return sol;
+  },
+
+  cerrarSolicitud(id, { montoConsumido, fechaCierre, comentarioCierre, factura, voucher }) {
+    const sol = DB.getSolicitud(id);
+    const u   = this.currentUser();
+    sol.estado          = 'pendiente_validacion';
+    sol.montoConsumido  = parseFloat(montoConsumido);
+    sol.fechaCierre     = fechaCierre;
+    sol.comentarioCierre = comentarioCierre;
+    if (factura) sol.factura  = factura;
+    if (voucher) sol.voucher  = voucher;
+    sol.historial.push({ fecha: this._now(), accion: 'Cierre registrado por solicitante', usuario: u.nombre });
+    DB.saveSolicitud(sol);
+    return sol;
+  },
+
+  validarCierre(id) {
+    const sol = DB.getSolicitud(id);
+    const u   = this.currentUser();
+    sol.estado = 'validado';
+    sol.historial.push({ fecha: this._now(), accion: 'Validado por Finanzas', usuario: u.nombre });
+    DB.saveSolicitud(sol);
+    this._notificar(sol, 'cierre');
+    return sol;
+  },
+
+  observarCierre(id, motivo) {
+    const sol = DB.getSolicitud(id);
+    const u   = this.currentUser();
+    sol.estado = 'observado';
+    sol.historial.push({ fecha: this._now(), accion: `Observado: ${motivo}`, usuario: u.nombre });
+    DB.saveSolicitud(sol);
+    return sol;
+  },
+
+  subirEvidencia(id, archivo) {
+    const sol = DB.getSolicitud(id);
+    const u   = this.currentUser();
+    sol.evidencias.push({ nombre: archivo.nombre, data: archivo.data, fecha: this._now() });
+    sol.historial.push({ fecha: this._now(), accion: `Evidencia cargada: ${archivo.nombre}`, usuario: u.nombre });
+    DB.saveSolicitud(sol);
+    return sol;
+  },
+
+  // ─── Filtros para reportes ────────────────────────────────────────────────
+  filtrar({ solicitante, proyecto, moneda, estado, fechaDesde, fechaHasta, montoMin, montoMax } = {}) {
+    let list = DB.getSolicitudes();
+    if (solicitante) list = list.filter(s => s.solicitante.toLowerCase().includes(solicitante.toLowerCase()));
+    if (proyecto)    list = list.filter(s => s.proyecto.toLowerCase().includes(proyecto.toLowerCase()));
+    if (moneda)      list = list.filter(s => s.moneda === moneda);
+    if (estado)      list = list.filter(s => s.estado === estado);
+    if (fechaDesde)  list = list.filter(s => s.fechaSolicitud >= fechaDesde);
+    if (fechaHasta)  list = list.filter(s => s.fechaSolicitud <= fechaHasta);
+    if (montoMin)    list = list.filter(s => s.montoSolicitado >= parseFloat(montoMin));
+    if (montoMax)    list = list.filter(s => s.montoSolicitado <= parseFloat(montoMax));
+    return list;
+  },
+
+  // ─── Exportar CSV ────────────────────────────────────────────────────────
+  exportCSV(list) {
+    const cols = ['ID','Solicitante','Proyecto','Moneda','Monto Solicitado','Monto Consumido','Asunto','Estado','Fecha Solicitud','Fecha Decisión'];
+    const rows = list.map(s => [
+      s.id, s.solicitante, s.proyecto, s.moneda,
+      s.montoSolicitado, s.montoConsumido ?? '',
+      `"${s.asunto}"`, s.estado, s.fechaSolicitud, s.fechaDecision ?? ''
+    ]);
+    const csv = [cols, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a'); a.href = url; a.download = 'solicitudes.csv'; a.click();
+  },
+
+  // ─── Plantillas de mensajes ───────────────────────────────────────────────
+  renderTemplate(plantilla, sol) {
+    return plantilla
+      .replace(/{{solicitante}}/g, sol.solicitante)
+      .replace(/{{proyecto}}/g,    sol.proyecto)
+      .replace(/{{moneda}}/g,      sol.moneda)
+      .replace(/{{monto}}/g,       this._fmt(sol.montoSolicitado))
+      .replace(/{{montoConsumido}}/g, this._fmt(sol.montoConsumido))
+      .replace(/{{asunto}}/g,      sol.asunto)
+      .replace(/{{estatus}}/g,     this.estadoLabel(sol.estado))
+      .replace(/{{fecha}}/g,       sol.fechaDecision || sol.fechaSolicitud)
+      .replace(/{{firma}}/g,       DB.getConfig().email?.firma || '');
+  },
+
+  _notificar(sol, tipo) {
+    // Legacy call — uses config defaults, no destination override
+    this._notificarConDatos(sol, tipo, { modo: 'ambos', waNum: '', emailTo: '' });
+  },
+
+  _notificarConDatos(sol, tipo, { modo = 'ambos', waNum = '', emailTo = '' } = {}) {
+    const cfg = DB.getConfig();
+    let waTpl, emailAsunto, emailCuerpo;
+    if (tipo === 'aprobacion') {
+      waTpl       = cfg.whatsapp?.plantillaAprobacion;
+      emailAsunto = cfg.email?.asuntoAprobacion;
+      emailCuerpo = cfg.email?.cuerpoAprobacion;
+    } else if (tipo === 'rechazo') {
+      waTpl       = cfg.whatsapp?.plantillaRechazo;
+      emailAsunto = cfg.email?.asuntoRechazo;
+      emailCuerpo = cfg.email?.cuerpoRechazo;
+    } else {
+      waTpl       = cfg.whatsapp?.plantillaCierre;
+      emailAsunto = cfg.email?.asuntoCierre;
+      emailCuerpo = cfg.email?.cuerpoAprobacion;
+    }
+    const waMsg = this.renderTemplate(waTpl || '', sol);
+    const eMsg  = this.renderTemplate(emailCuerpo || '', sol);
+    const eAsun = this.renderTemplate(emailAsunto  || '', sol);
+    const finalWaNum    = waNum   || cfg.whatsapp?.numeroFinanzas || '';
+    const finalEmailTo  = emailTo || cfg.email?.correoFinanzas    || '';
+    sessionStorage.setItem('gtc_last_notification', JSON.stringify({
+      tipo, sol: sol.id, modo,
+      whatsapp: { numero: finalWaNum,   mensaje: waMsg },
+      email:    { asunto: eAsun, cuerpo: eMsg, destino: finalEmailTo },
+      timestamp: this._now(),
+    }));
+  },
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+  _now() { return new Date().toLocaleString('es-PE'); },
+  _fmt(n) { return n != null ? Number(n).toLocaleString('es-PE', { minimumFractionDigits: 2 }) : '0.00'; },
+
+  estadoLabel(estado) {
+    const map = {
+      pendiente:            'Pendiente',
+      aprobado:             'Aprobado',
+      rechazado:            'Rechazado',
+      tarjeta_entregada:    'Tarjeta Entregada',
+      pendiente_cierre:     'Pend. Cierre',
+      cerrado:              'Cerrado',
+      pendiente_validacion: 'Pend. Validación',
+      validado:             'Validado',
+      observado:            'Observado',
+    };
+    return map[estado] || estado;
+  },
+
+  estadoColor(estado) {
+    const map = {
+      pendiente:            'badge-yellow',
+      aprobado:             'badge-green',
+      rechazado:            'badge-red',
+      tarjeta_entregada:    'badge-blue',
+      pendiente_cierre:     'badge-yellow',
+      cerrado:              'badge-blue',
+      pendiente_validacion: 'badge-yellow',
+      validado:             'badge-green',
+      observado:            'badge-orange',
+    };
+    return map[estado] || 'badge-gray';
+  },
+
+  formatMoney(amount, currency = '') {
+    return `${currency} ${Number(amount || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+  },
+};
+
+</script>
+<script>
+/* ══════════════════════════════════════════════════════
+   UI UTILITIES
+   ══════════════════════════════════════════════════════ */
+function toast(msg, type = 'info') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icons = { success:'✅', error:'❌', info:'ℹ️', warning:'⚠️' };
+  t.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function openModal(html) {
+  const c = document.getElementById('modal-container');
+  c.innerHTML = `<div class="modal-backdrop" id="active-modal">${html}</div>`;
+  requestAnimationFrame(() => document.getElementById('active-modal').classList.add('open'));
+}
+function closeModal() {
+  const m = document.getElementById('active-modal');
+  if (m) { m.classList.remove('open'); setTimeout(() => m.remove(), 200); }
+}
+
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-overlay').classList.add('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').classList.remove('show'); }
+
+function confirm2(msg, onYes) {
+  openModal(`<div class="modal" style="max-width:380px;">
+    <div class="modal-header"><span class="modal-title">Confirmar</span><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><p style="font-size:14px;color:var(--text-label);">${msg}</p></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="closeModal();(${onYes.toString()})()">Confirmar</button>
+    </div>
+  </div>`);
+}
+
+function estadoBadge(est) {
+  return `<span class="badge ${BL.estadoColor(est)}">${BL.estadoLabel(est)}</span>`;
+}
+
+function setPage(title, sub = '', actionsHtml = '') {
+  document.getElementById('page-title').textContent = title;
+  document.getElementById('page-sub').textContent = sub;
+  document.getElementById('topbar-actions').innerHTML = actionsHtml;
+}
+
+function readFileAsBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function moneyFmt(n, cur='') { return `${cur} ${Number(n||0).toLocaleString('es-PE',{minimumFractionDigits:2})}`; }
+
+/* ══════════════════════════════════════════════════════
+   AUTH
+   ══════════════════════════════════════════════════════ */
+function quickLogin(email) {
+  document.getElementById('login-email').value = email;
+  document.getElementById('login-pass').value  = '1234';
+  doLogin();
+}
+
+function doLogin() {
+  const email = document.getElementById('login-email').value;
+  const pass  = document.getElementById('login-pass').value;
+  const r = BL.login(email, pass);
+  if (!r.ok) { document.getElementById('login-error').textContent = r.error; return; }
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  initApp(r.user);
+}
+
+function doLogout() {
+  BL.logout();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-error').textContent = '';
+}
+
+/* ══════════════════════════════════════════════════════
+   APP INIT
+   ══════════════════════════════════════════════════════ */
+function initApp(user) {
+  renderSidebarUser(user);
+  renderNav(user);
+  routeTo('dashboard');
+}
+
+function renderSidebarUser(user) {
+  const initials = user.nombre.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+  const rolLabel = { admin:'Administrador', finanzas:'Finanzas', solicitante:'Solicitante' };
+  document.getElementById('sidebar-user').innerHTML = `
+    <div class="user-avatar">${initials}</div>
+    <div class="user-info">
+      <div class="user-name">${user.nombre}</div>
+      <div class="user-role">${rolLabel[user.rol]||user.rol}</div>
+    </div>`;
+}
+
+function renderNav(user) {
+  const nav = document.getElementById('sidebar-nav');
+  const rol = user.rol;
+  const all = [
+    { id:'dashboard',  icon:'📊', label:'Dashboard',       roles:['admin','finanzas','solicitante'] },
+    { sep:'SOLICITUDES' },
+    { id:'nueva',      icon:'➕', label:'Nueva Solicitud',  roles:['solicitante','admin'] },
+    { id:'mis',        icon:'📋', label:'Mis Solicitudes',  roles:['solicitante'] },
+    { sep:'FINANZAS' },
+    { id:'pendientes', icon:'⏳', label:'Pendientes',       roles:['finanzas','admin'] },
+    { id:'todas',      icon:'📂', label:'Todas las Solic.', roles:['finanzas','admin'] },
+    { id:'entrega',    icon:'💳', label:'Entrega Tarjetas', roles:['finanzas','admin'] },
+    { id:'validacion', icon:'✔️',  label:'Validación Cierre',roles:['finanzas','admin'] },
+    { sep:'ANÁLISIS' },
+    { id:'reportes',   icon:'📈', label:'Reportes',         roles:['admin','finanzas'] },
+    { sep:'ADMIN' },
+    { id:'usuarios',   icon:'👥', label:'Usuarios',         roles:['admin'] },
+    { id:'config',     icon:'⚙️',  label:'Configuración',    roles:['admin','finanzas'] },
+    { id:'info',       icon:'ℹ️',  label:'Evaluación Técnica',roles:['admin'] },
+  ];
+  nav.innerHTML = '';
+  let lastSep = null;
+  all.forEach(item => {
+    if (item.sep) { lastSep = item.sep; return; }
+    if (!item.roles.includes(rol)) return;
+    if (lastSep) {
+      nav.innerHTML += `<div class="nav-section-label">${lastSep}</div>`;
+      lastSep = null;
+    }
+    nav.innerHTML += `<button class="nav-item" id="nav-${item.id}" onclick="routeTo('${item.id}')">
+      <span class="nav-icon">${item.icon}</span>${item.label}</button>`;
+  });
+}
+
+function setActiveNav(id) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById(`nav-${id}`);
+  if (el) el.classList.add('active');
+}
+
+function routeTo(page) {
+  closeSidebar();
+  setActiveNav(page);
+  const content = document.getElementById('page-content');
+  const pages = {
+    dashboard:  renderDashboard,
+    nueva:      renderNuevaSolicitud,
+    mis:        renderMisSolicitudes,
+    pendientes: renderPendientes,
+    todas:      renderTodas,
+    entrega:    renderEntrega,
+    validacion: renderValidacion,
+    reportes:   renderReportes,
+    usuarios:   renderUsuarios,
+    config:     renderConfig,
+    info:       renderInfo,
+  };
+  if (pages[page]) pages[page](content);
+  else content.innerHTML = `<div class="empty-state"><div class="empty-icon">🚧</div><h3>En construcción</h3></div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE — DASHBOARD
+   ══════════════════════════════════════════════════════ */
+function renderDashboard(el) {
+  const u = BL.currentUser();
+  const s = DB.getStats();
+  const sols = DB.getSolicitudes();
+  const recientes = [...sols].reverse().slice(0, 6);
+  setPage('Dashboard', `Bienvenido, ${u.nombre}`);
+
+  el.innerHTML = `
+  <div class="dashboard-header">
+    <div class="welcome-text">
+      <h2>Panel de Control</h2>
+      <p>Resumen general del sistema de tarjetas de crédito</p>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="routeTo('reportes')">📈 Ver reportes completos</button>
+  </div>
+
+  <div class="stat-grid" style="margin-bottom:28px;">
+    <div class="stat-card" style="--stat-accent:var(--blue);">
+      <div class="stat-label">Total Solicitudes</div>
+      <div class="stat-value">${s.total}</div>
+      <div class="stat-sub">Todas las solicitudes</div>
+      <div class="stat-icon">📋</div>
+    </div>
+    <div class="stat-card" style="--stat-accent:var(--yellow);">
+      <div class="stat-label">Pendientes</div>
+      <div class="stat-value">${s.pendiente}</div>
+      <div class="stat-sub">Sin decisión de Finanzas</div>
+      <div class="stat-icon">⏳</div>
+    </div>
+    <div class="stat-card" style="--stat-accent:var(--green);">
+      <div class="stat-label">Aprobadas</div>
+      <div class="stat-value">${s.aprobado}</div>
+      <div class="stat-sub">Listas para entrega</div>
+      <div class="stat-icon">✅</div>
+    </div>
+    <div class="stat-card" style="--stat-accent:var(--red);">
+      <div class="stat-label">Rechazadas</div>
+      <div class="stat-value">${s.rechazado}</div>
+      <div class="stat-sub">No autorizadas</div>
+      <div class="stat-icon">❌</div>
+    </div>
+    <div class="stat-card" style="--stat-accent:var(--purple);">
+      <div class="stat-label">Tarjeta Entregada</div>
+      <div class="stat-value">${s.tarjeta_entregada}</div>
+      <div class="stat-sub">En uso por personal</div>
+      <div class="stat-icon">💳</div>
+    </div>
+    <div class="stat-card" style="--stat-accent:var(--blue);">
+      <div class="stat-label">Cerradas/Validadas</div>
+      <div class="stat-value">${s.validado}</div>
+      <div class="stat-sub">Proceso completado</div>
+      <div class="stat-icon">🔒</div>
+    </div>
+    <div class="stat-card" style="--stat-accent:var(--green);grid-column:span 1;">
+      <div class="stat-label">Monto Solicitado</div>
+      <div class="stat-value" style="font-size:18px;">${moneyFmt(s.montoSolicitado)}</div>
+      <div class="stat-sub">Total histórico</div>
+      <div class="stat-icon">💰</div>
+    </div>
+    <div class="stat-card" style="--stat-accent:var(--orange);">
+      <div class="stat-label">Monto Consumido</div>
+      <div class="stat-value" style="font-size:18px;">${moneyFmt(s.montoConsumido)}</div>
+      <div class="stat-sub">Gasto ejecutado</div>
+      <div class="stat-icon">💸</div>
+    </div>
+    <div class="stat-card" style="--stat-accent:var(--red);">
+      <div class="stat-label">Balance Pendiente</div>
+      <div class="stat-value" style="font-size:18px;">${moneyFmt(s.balancePendiente)}</div>
+      <div class="stat-sub">Por cerrar o validar</div>
+      <div class="stat-icon">⚖️</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Solicitudes Recientes</span>
+      <button class="btn btn-secondary btn-sm" onclick="routeTo('todas')">Ver todas →</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>ID</th><th>Solicitante</th><th>Proyecto</th>
+          <th>Monto</th><th>Estado</th><th>Fecha</th>
+        </tr></thead>
+        <tbody>
+          ${recientes.map(s => `<tr>
+            <td><code style="font-size:11px;color:var(--accent);">${s.id}</code></td>
+            <td>${s.solicitante}</td>
+            <td>${s.proyecto}</td>
+            <td>${moneyFmt(s.montoSolicitado, s.moneda)}</td>
+            <td>${estadoBadge(s.estado)}</td>
+            <td>${s.fechaSolicitud}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE — NUEVA SOLICITUD
+   ══════════════════════════════════════════════════════ */
+function renderNuevaSolicitud(el) {
+  const u   = BL.currentUser();
+  const cfg = DB.getConfig();
+  setPage('Nueva Solicitud', 'Complete el formulario para solicitar una tarjeta de crédito');
+
+  el.innerHTML = `
+  <div style="max-width:640px;">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">➕ Solicitud de Tarjeta de Crédito</span>
+      </div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Solicitante</label>
+            <input type="text" id="f-solicitante" class="form-control" value="${u.nombre}" readonly
+              style="background:var(--bg-base);color:var(--text-muted);cursor:not-allowed;opacity:.8;">
+            <div class="form-hint">📌 Asignado automáticamente a tu usuario</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fecha de Solicitud <span class="req">*</span></label>
+            <input type="date" id="f-fecha" class="form-control" value="${new Date().toISOString().split('T')[0]}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Proyecto <span class="req">*</span></label>
+            <select id="f-proyecto" class="form-control">
+              <option value="">Seleccionar proyecto...</option>
+              ${(cfg.proyectos||[]).map(p=>`<option>${p}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Moneda <span class="req">*</span></label>
+            <select id="f-moneda" class="form-control">
+              ${(cfg.monedas||['USD','PEN','EUR']).map(m=>`<option>${m}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monto Solicitado <span class="req">*</span></label>
+          <input type="number" id="f-monto" class="form-control" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Asunto / Motivo de uso <span class="req">*</span></label>
+          <textarea id="f-asunto" class="form-control" rows="3" placeholder="Describa brevemente el propósito del gasto..."></textarea>
+        </div>
+        <div id="form-error" class="form-error"></div>
+        <div style="display:flex;gap:10px;margin-top:8px;">
+          <button class="btn btn-primary" onclick="submitSolicitud()">📤 Enviar a Finanzas</button>
+          <button class="btn btn-secondary" onclick="routeTo('mis')">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function submitSolicitud() {
+  const u = BL.currentUser();
+  const data = {
+    solicitante:    u.nombre,
+    proyecto:       document.getElementById('f-proyecto').value,
+    moneda:         document.getElementById('f-moneda').value,
+    montoSolicitado: document.getElementById('f-monto').value,
+    asunto:         document.getElementById('f-asunto').value,
+    fechaSolicitud: document.getElementById('f-fecha').value,
+  };
+  const err = document.getElementById('form-error');
+  if (!data.proyecto)       { err.textContent = 'Seleccione un proyecto.'; return; }
+  if (!data.montoSolicitado || parseFloat(data.montoSolicitado) <= 0) { err.textContent = 'Ingrese un monto válido.'; return; }
+  if (!data.asunto.trim())  { err.textContent = 'Ingrese el motivo del uso.'; return; }
+  BL.crearSolicitud(data);
+  toast('Solicitud enviada a Finanzas ✅', 'success');
+  routeTo('mis');
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE — MIS SOLICITUDES
+   ══════════════════════════════════════════════════════ */
+function renderMisSolicitudes(el) {
+  const u = BL.currentUser();
+  const sols = DB.getSolicitudes().filter(s => s.solicitanteId === u.id);
+  setPage('Mis Solicitudes', `${sols.length} solicitudes registradas`,
+    `<button class="btn btn-primary btn-sm" onclick="routeTo('nueva')">➕ Nueva Solicitud</button>`);
+
+  el.innerHTML = `
+  <div class="card">
+    <div class="card-header"><span class="card-title">📋 Historial de Solicitudes</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Proyecto</th><th>Monto</th><th>Asunto</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr></thead>
+        <tbody>
+          ${sols.length ? sols.map(s => `<tr>
+            <td><code style="font-size:11px;color:var(--accent);">${s.id}</code></td>
+            <td>${s.proyecto}</td>
+            <td>${moneyFmt(s.montoSolicitado, s.moneda)}</td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${s.asunto}">${s.asunto}</td>
+            <td>${estadoBadge(s.estado)}</td>
+            <td>${s.fechaSolicitud}</td>
+            <td><div class="table-actions">
+              <button class="btn btn-secondary btn-xs" onclick="verDetalle('${s.id}')">👁 Ver</button>
+              ${s.estado === 'tarjeta_entregada' ? `<button class="btn btn-primary btn-xs" onclick="modalCierre('${s.id}')">🔒 Cerrar</button>` : ''}
+            </div></td>
+          </tr>`).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📋</div><h3>Sin solicitudes</h3><p>Crea tu primera solicitud</p></div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE — FINANZAS: PENDIENTES
+   ══════════════════════════════════════════════════════ */
+function renderPendientes(el) {
+  const sols = DB.getSolicitudes().filter(s => s.estado === 'pendiente');
+  setPage('Solicitudes Pendientes', `${sols.length} en espera de decisión`);
+
+  el.innerHTML = `
+  <div class="card">
+    <div class="card-header"><span class="card-title">⏳ Pendientes de Aprobación</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Solicitante</th><th>Proyecto</th><th>Moneda</th><th>Monto</th><th>Asunto</th><th>Fecha</th><th>Decisión</th></tr></thead>
+        <tbody>
+          ${sols.length ? sols.map(s => `<tr>
+            <td><code style="font-size:11px;color:var(--accent);">${s.id}</code></td>
+            <td>${s.solicitante}</td>
+            <td>${s.proyecto}</td>
+            <td>${s.moneda}</td>
+            <td>${moneyFmt(s.montoSolicitado)}</td>
+            <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.asunto}</td>
+            <td>${s.fechaSolicitud}</td>
+            <td><div class="table-actions">
+              <button class="btn btn-success btn-xs" onclick="modalDecision('${s.id}','aprobar')">✅ Aprobar</button>
+              <button class="btn btn-danger btn-xs"  onclick="modalDecision('${s.id}','rechazar')">❌ Rechazar</button>
+              <button class="btn btn-secondary btn-xs" onclick="verDetalle('${s.id}')">👁</button>
+            </div></td>
+          </tr>`).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🎉</div><h3>Sin pendientes</h3><p>No hay solicitudes esperando decisión</p></div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE — TODAS LAS SOLICITUDES
+   ══════════════════════════════════════════════════════ */
+function renderTodas(el) {
+  setPage('Todas las Solicitudes', 'Vista completa para Finanzas');
+  renderTabla(el, DB.getSolicitudes(), true);
+}
+
+function renderTabla(el, sols, showFinanzasActions = false) {
+  el.innerHTML = `
+  <div class="filters-bar">
+    <input type="text" class="form-control" id="f-search" placeholder="🔍 Buscar..." oninput="filtrarTabla()">
+    <select class="form-control" id="f-estado" onchange="filtrarTabla()">
+      <option value="">Todos los estados</option>
+      <option value="pendiente">Pendiente</option>
+      <option value="aprobado">Aprobado</option>
+      <option value="rechazado">Rechazado</option>
+      <option value="tarjeta_entregada">Tarjeta Entregada</option>
+      <option value="pendiente_validacion">Pend. Validación</option>
+      <option value="validado">Validado</option>
+      <option value="observado">Observado</option>
+    </select>
+    <button class="btn btn-secondary btn-sm" onclick="filtrarTabla()">Filtrar</button>
+  </div>
+  <div class="card" id="tabla-card">
+    <div class="card-header"><span class="card-title" id="tabla-count">📂 ${sols.length} solicitudes</span></div>
+    <div class="table-wrap" id="tabla-body">${buildTablaRows(sols, showFinanzasActions)}</div>
+  </div>`;
+  window._tablaData = sols;
+  window._tablaFinanzas = showFinanzasActions;
+}
+
+function buildTablaRows(sols, showFinanzasActions) {
+  if (!sols.length) return `<div class="empty-state"><div class="empty-icon">📂</div><h3>Sin resultados</h3></div>`;
+  return `<table>
+    <thead><tr><th>ID</th><th>Solicitante</th><th>Proyecto</th><th>Monto</th><th>Consumido</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr></thead>
+    <tbody>
+      ${sols.map(s => `<tr>
+        <td><code style="font-size:11px;color:var(--accent);">${s.id}</code></td>
+        <td>${s.solicitante}</td>
+        <td>${s.proyecto}</td>
+        <td>${moneyFmt(s.montoSolicitado, s.moneda)}</td>
+        <td>${s.montoConsumido != null ? moneyFmt(s.montoConsumido, s.moneda) : '<span style="color:var(--text-muted)">—</span>'}</td>
+        <td>${estadoBadge(s.estado)}</td>
+        <td>${s.fechaSolicitud}</td>
+        <td><div class="table-actions">
+          <button class="btn btn-secondary btn-xs" onclick="verDetalle('${s.id}')">👁 Ver</button>
+          ${showFinanzasActions && s.estado === 'pendiente' ? `<button class="btn btn-success btn-xs" onclick="modalDecision('${s.id}','aprobar')">✅</button><button class="btn btn-danger btn-xs" onclick="modalDecision('${s.id}','rechazar')">❌</button>` : ''}
+        </div></td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function filtrarTabla() {
+  const search = (document.getElementById('f-search')?.value || '').toLowerCase();
+  const estado = document.getElementById('f-estado')?.value || '';
+  let list = window._tablaData || [];
+  if (search) list = list.filter(s =>
+    s.solicitante.toLowerCase().includes(search) ||
+    s.proyecto.toLowerCase().includes(search) ||
+    s.id.toLowerCase().includes(search) ||
+    s.asunto.toLowerCase().includes(search));
+  if (estado) list = list.filter(s => s.estado === estado);
+  document.getElementById('tabla-count').textContent = `📂 ${list.length} solicitudes`;
+  document.getElementById('tabla-body').innerHTML = buildTablaRows(list, window._tablaFinanzas);
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE — ENTREGA FÍSICA
+   ══════════════════════════════════════════════════════ */
+function renderEntrega(el) {
+  const sols = DB.getSolicitudes().filter(s => s.estado === 'aprobado');
+  const u = BL.currentUser();
+  setPage('Entrega de Tarjetas', `${sols.length} tarjetas listas para entrega`);
+
+  el.innerHTML = `
+  <div class="card">
+    <div class="card-header"><span class="card-title">💳 Aprobadas — Pendientes de Entrega Física</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Solicitante</th><th>Proyecto</th><th>Monto</th><th>Fecha Aprobación</th><th>Acción</th></tr></thead>
+        <tbody>
+          ${sols.length ? sols.map(s => `<tr>
+            <td><code style="font-size:11px;color:var(--accent);">${s.id}</code></td>
+            <td>${s.solicitante}</td>
+            <td>${s.proyecto}</td>
+            <td>${moneyFmt(s.montoSolicitado, s.moneda)}</td>
+            <td>${s.fechaDecision||'—'}</td>
+            <td><button class="btn btn-primary btn-xs" onclick="modalEntrega('${s.id}')">💳 Marcar Entregada</button></td>
+          </tr>`).join('') : `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">💳</div><h3>Sin tarjetas pendientes</h3><p>No hay tarjetas aprobadas esperando entrega</p></div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE — VALIDACIÓN CIERRE
+   ══════════════════════════════════════════════════════ */
+function renderValidacion(el) {
+  const sols = DB.getSolicitudes().filter(s => ['pendiente_validacion','observado'].includes(s.estado));
+  setPage('Validación de Cierre', `${sols.length} cierres por validar`);
+
+  el.innerHTML = `
+  <div class="card">
+    <div class="card-header"><span class="card-title">✔️ Cierres Pendientes de Validación</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Solicitante</th><th>Proyecto</th><th>Solicitado</th><th>Consumido</th><th>Diferencia</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          ${sols.length ? sols.map(s => {
+            const dif = (s.montoSolicitado||0) - (s.montoConsumido||0);
+            return `<tr>
+              <td><code style="font-size:11px;color:var(--accent);">${s.id}</code></td>
+              <td>${s.solicitante}</td>
+              <td>${s.proyecto}</td>
+              <td>${moneyFmt(s.montoSolicitado, s.moneda)}</td>
+              <td>${moneyFmt(s.montoConsumido, s.moneda)}</td>
+              <td style="color:${dif>=0?'var(--green)':'var(--red)'};">${dif>=0?'+':''}${moneyFmt(dif)}</td>
+              <td>${estadoBadge(s.estado)}</td>
+              <td><div class="table-actions">
+                <button class="btn btn-secondary btn-xs" onclick="verDetalle('${s.id}')">👁 Ver</button>
+                <button class="btn btn-success btn-xs" onclick="validarCierre('${s.id}')">✅ Validar</button>
+                <button class="btn btn-warning btn-xs" onclick="modalObservar('${s.id}')">⚠️ Observar</button>
+              </div></td>
+            </tr>`;
+          }).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">✅</div><h3>Sin pendientes</h3><p>Todos los cierres han sido validados</p></div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE — REPORTES
+   ══════════════════════════════════════════════════════ */
+function renderReportes(el) {
+  setPage('Reportes', 'Análisis y exportación de datos');
+  const cfg = DB.getConfig();
+  const sols = DB.getSolicitudes();
+
+  // Group by project
+  const byProj = {};
+  sols.forEach(s => { byProj[s.proyecto] = byProj[s.proyecto] || { count:0, monto:0 }; byProj[s.proyecto].count++; byProj[s.proyecto].monto += s.montoSolicitado||0; });
+
+  el.innerHTML = `
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header"><span class="card-title">🔍 Filtros de Reporte</span></div>
+    <div class="card-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Solicitante</label>
+          <input type="text" id="r-solicitante" class="form-control" placeholder="Nombre...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Proyecto</label>
+          <select id="r-proyecto" class="form-control">
+            <option value="">Todos</option>
+            ${(cfg.proyectos||[]).map(p=>`<option>${p}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado</label>
+          <select id="r-estado" class="form-control">
+            <option value="">Todos</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="aprobado">Aprobado</option>
+            <option value="rechazado">Rechazado</option>
+            <option value="tarjeta_entregada">Tarjeta Entregada</option>
+            <option value="pendiente_validacion">Pend. Validación</option>
+            <option value="validado">Validado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Fecha Desde</label>
+          <input type="date" id="r-desde" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha Hasta</label>
+          <input type="date" id="r-hasta" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Moneda</label>
+          <select id="r-moneda" class="form-control">
+            <option value="">Todas</option>
+            ${(cfg.monedas||[]).map(m=>`<option>${m}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary btn-sm" onclick="aplicarFiltroReporte()">📊 Generar Reporte</button>
+        <button class="btn btn-success btn-sm" onclick="exportarCSV()">📥 Exportar CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-summary">
+    ${Object.entries(byProj).map(([p,v])=>`
+    <div class="report-summary-card">
+      <div class="rs-value">${v.count}</div>
+      <div class="rs-label">${p}</div>
+      <div style="font-size:11px;color:var(--accent);margin-top:4px;">${moneyFmt(v.monto)}</div>
+    </div>`).join('')}
+  </div>
+
+  <div class="card" id="reporte-resultado">
+    <div class="card-header"><span class="card-title" id="reporte-count">📋 ${sols.length} registros encontrados</span></div>
+    <div class="table-wrap" id="reporte-tabla">${buildTablaReporte(sols)}</div>
+  </div>`;
+
+  window._reporteData = sols;
+}
+
+function buildTablaReporte(list) {
+  if (!list.length) return `<div class="empty-state"><div class="empty-icon">📊</div><h3>Sin resultados</h3></div>`;
+  return `<table>
+    <thead><tr><th>ID</th><th>Solicitante</th><th>Proyecto</th><th>Moneda</th><th>Solicitado</th><th>Consumido</th><th>Estado</th><th>Fecha</th></tr></thead>
+    <tbody>
+      ${list.map(s=>`<tr>
+        <td><code style="font-size:11px;color:var(--accent);">${s.id}</code></td>
+        <td>${s.solicitante}</td><td>${s.proyecto}</td><td>${s.moneda}</td>
+        <td>${moneyFmt(s.montoSolicitado)}</td>
+        <td>${s.montoConsumido!=null?moneyFmt(s.montoConsumido):'—'}</td>
+        <td>${estadoBadge(s.estado)}</td>
+        <td>${s.fechaSolicitud}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function aplicarFiltroReporte() {
+  const list = BL.filtrar({
+    solicitante: document.getElementById('r-solicitante').value,
+    proyecto:    document.getElementById('r-proyecto').value,
+    moneda:      document.getElementById('r-moneda').value,
+    estado:      document.getElementById('r-estado').value,
+    fechaDesde:  document.getElementById('r-desde').value,
+    fechaHasta:  document.getElementById('r-hasta').value,
+  });
+  window._reporteData = list;
+  document.getElementById('reporte-count').textContent = `📋 ${list.length} registros encontrados`;
+  document.getElementById('reporte-tabla').innerHTML = buildTablaReporte(list);
+}
+
+function exportarCSV() {
+  BL.exportCSV(window._reporteData || DB.getSolicitudes());
+  toast('Exportando CSV...', 'success');
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE — USUARIOS
+   ══════════════════════════════════════════════════════ */
+function renderUsuarios(el) {
+  setPage('Gestión de Usuarios', 'Administrar perfiles del sistema',
+    `<button class="btn btn-primary btn-sm" onclick="modalNuevoUsuario()">➕ Nuevo Usuario</button>`);
+  const users = DB.getUsuarios();
+  const rolLabel = { admin:'Administrador', finanzas:'Finanzas', solicitante:'Solicitante' };
+  const currentId = BL.currentUser()?.id;
+
+  el.innerHTML = `
+  <!-- Roles description -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header"><span class="card-title">🔐 Descripción de Roles</span></div>
+    <div class="card-body" style="padding:0;">
+      <table>
+        <thead><tr><th>Rol</th><th>Permisos</th><th>Restricciones</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-green">Solicitante</span></td>
+            <td style="font-size:12px;color:var(--text-label);">
+              ✅ Crear solicitudes de tarjeta<br>
+              ✅ Ver únicamente sus propias solicitudes<br>
+              ✅ Subir factura y voucher de pago<br>
+              ✅ Registrar cierre de consumo
+            </td>
+            <td style="font-size:12px;color:var(--text-muted);">
+              ❌ No puede ver solicitudes de otros<br>
+              ❌ No puede aprobar ni rechazar<br>
+              ❌ Sin acceso a reportes ni configuración
+            </td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">Finanzas</span></td>
+            <td style="font-size:12px;color:var(--text-label);">
+              ✅ Ver todas las solicitudes<br>
+              ✅ Aprobar o rechazar solicitudes<br>
+              ✅ Marcar entrega física de tarjeta<br>
+              ✅ Validar o observar cierres<br>
+              ✅ Ver reportes y configuración de mensajes
+            </td>
+            <td style="font-size:12px;color:var(--text-muted);">
+              ❌ No puede crear usuarios<br>
+              ❌ No puede modificar catálogos
+            </td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-purple">Administrador</span></td>
+            <td style="font-size:12px;color:var(--text-label);">
+              ✅ Acceso total al sistema<br>
+              ✅ Crear, editar y eliminar usuarios<br>
+              ✅ Configurar WhatsApp y correos<br>
+              ✅ Modificar todos los catálogos<br>
+              ✅ Ver todos los reportes
+            </td>
+            <td style="font-size:12px;color:var(--text-muted);">
+              — Sin restricciones
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Users table -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">👥 Usuarios del Sistema (${users.length})</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nombre</th><th>Correo</th><th>WhatsApp</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          ${users.map(u=>`<tr>
+            <td><div style="display:flex;align-items:center;gap:8px;">
+              <div class="user-avatar" style="width:28px;height:28px;font-size:11px;">${u.nombre.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()}</div>
+              ${u.nombre}${u.id === currentId ? ' <span class="badge badge-blue" style="font-size:10px;padding:2px 6px;">Tú</span>' : ''}
+            </div></td>
+            <td style="color:var(--text-muted);">${u.email}</td>
+            <td style="color:var(--text-muted);">${u.whatsapp || '<span style="color:var(--border-light);font-style:italic;">Sin registrar</span>'}</td>
+            <td><span class="badge ${u.rol==='admin'?'badge-purple':u.rol==='finanzas'?'badge-blue':'badge-green'}">${rolLabel[u.rol]||u.rol}</span></td>
+            <td><span class="badge ${u.activo?'badge-green':'badge-gray'}">${u.activo?'Activo':'Inactivo'}</span></td>
+            <td><div class="table-actions">
+              <button class="btn btn-secondary btn-xs" onclick="modalEditarUsuario('${u.id}')">✏️ Editar</button>
+              <button class="btn btn-${u.activo?'warning':'success'} btn-xs" onclick="toggleUsuario('${u.id}')">${u.activo?'⏸ Desactivar':'▶ Activar'}</button>
+              ${u.id !== currentId
+                ? `<button class="btn btn-danger btn-xs" onclick="confirmarEliminarUsuario('${u.id}','${u.nombre.replace(/'/g, '&#39;')}')">🗑 Eliminar</button>`
+                : `<button class="btn btn-secondary btn-xs" disabled style="opacity:.4;cursor:not-allowed;" title="No puedes eliminar tu propio usuario">🗑</button>`
+              }
+            </div></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE — CONFIGURACIÓN
+   ══════════════════════════════════════════════════════ */
+function renderConfig(el) {
+  setPage('Configuración', 'WhatsApp, correos y catálogos');
+  const cfg = DB.getConfig();
+  const wa  = cfg.whatsapp || {};
+  const em  = cfg.email    || {};
+
+  el.innerHTML = `
+  <div class="config-tabs">
+    <button class="config-tab active" onclick="switchConfigTab('whatsapp',this)">📱 WhatsApp</button>
+    <button class="config-tab" onclick="switchConfigTab('email',this)">📧 Correo</button>
+    <button class="config-tab" onclick="switchConfigTab('catalogos',this)">📚 Catálogos</button>
+    <button class="config-tab" onclick="switchConfigTab('backup',this)">💾 Respaldar / Importar</button>
+  </div>
+
+  <!-- WhatsApp -->
+  <div class="config-panel active" id="cfg-whatsapp">
+    <div class="card">
+      <div class="card-header"><span class="card-title">📱 Configuración de WhatsApp</span></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Número de Finanzas (WhatsApp)</label>
+          <input type="text" id="wa-numero" class="form-control" value="${wa.numeroFinanzas||''}" placeholder="+51999888777">
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Variables disponibles (click para insertar en el textarea activo):</p>
+        <div class="template-vars">
+          ${['{{solicitante}}','{{proyecto}}','{{moneda}}','{{monto}}','{{asunto}}','{{estatus}}','{{fecha}}','{{montoConsumido}}'].map(v=>`<span class="var-chip" onclick="insertVar(event,'${v}')">${v}</span>`).join('')}
+        </div>
+        <div class="form-group" style="margin-top:16px;">
+          <label class="form-label">Plantilla — Aprobación</label>
+          <textarea id="wa-aprobacion" class="form-control" rows="5">${wa.plantillaAprobacion||''}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Plantilla — Rechazo</label>
+          <textarea id="wa-rechazo" class="form-control" rows="5">${wa.plantillaRechazo||''}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Plantilla — Cierre</label>
+          <textarea id="wa-cierre" class="form-control" rows="5">${wa.plantillaCierre||''}</textarea>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveConfigWA()">💾 Guardar WhatsApp</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email -->
+  <div class="config-panel" id="cfg-email">
+    <div class="card">
+      <div class="card-header"><span class="card-title">📧 Configuración de Correo</span></div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Correo de Finanzas</label>
+            <input type="email" id="em-finanzas" class="form-control" value="${em.correoFinanzas||''}">
+          </div>
+        </div>
+        <div class="template-vars" style="margin-bottom:16px;">
+          ${['{{solicitante}}','{{proyecto}}','{{moneda}}','{{monto}}','{{asunto}}','{{estatus}}','{{fecha}}','{{firma}}'].map(v=>`<span class="var-chip" onclick="insertVar(event,'${v}')">${v}</span>`).join('')}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Asunto — Aprobación</label>
+          <input type="text" id="em-asunto-ap" class="form-control" value="${em.asuntoAprobacion||''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cuerpo — Aprobación</label>
+          <textarea id="em-cuerpo-ap" class="form-control" rows="6">${em.cuerpoAprobacion||''}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Asunto — Rechazo</label>
+          <input type="text" id="em-asunto-re" class="form-control" value="${em.asuntoRechazo||''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cuerpo — Rechazo</label>
+          <textarea id="em-cuerpo-re" class="form-control" rows="6">${em.cuerpoRechazo||''}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Firma predeterminada</label>
+          <textarea id="em-firma" class="form-control" rows="4">${em.firma||''}</textarea>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveConfigEmail()">💾 Guardar Correo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Catálogos -->
+  <div class="config-panel" id="cfg-catalogos">
+    <div class="card">
+      <div class="card-header"><span class="card-title">📚 Catálogos del Sistema</span></div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Proyectos (uno por línea)</label>
+            <textarea id="cat-proyectos" class="form-control" rows="8">${(cfg.proyectos||[]).join('\n')}</textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Monedas (uno por línea)</label>
+            <textarea id="cat-monedas" class="form-control" rows="4">${(cfg.monedas||[]).join('\n')}</textarea>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:8px;">
+          <label class="form-label">Tarjetas de Crédito Disponibles</label>
+          <div class="form-hint" style="margin-bottom:10px;">Estas tarjetas aparecen en el formulario de entrega física.</div>
+          <div style="display:grid;grid-template-columns:2fr 2fr 2fr auto;gap:6px;margin-bottom:6px;padding:0 4px;">
+            <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Número de tarjeta</span>
+            <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Alias / Descripción</span>
+            <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Empresa</span>
+            <span></span>
+          </div>
+          <div id="tarjetas-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+            ${(cfg.tarjetas||[]).map((t,i)=>`
+            <div style="display:grid;grid-template-columns:2fr 2fr 2fr auto;gap:6px;align-items:center;" id="tarjeta-row-${i}">
+              <input type="text" class="form-control" id="t-num-${i}" value="${t.numero}" placeholder="4111 **** **** 1234">
+              <input type="text" class="form-control" id="t-ali-${i}" value="${t.alias||''}" placeholder="Alias o descripción">
+              <input type="text" class="form-control" id="t-emp-${i}" value="${t.empresa||''}" placeholder="Empresa emisora">
+              <button class="btn btn-danger btn-xs btn-icon" onclick="eliminarTarjeta(${i})" title="Eliminar tarjeta">🗑</button>
+            </div>`).join('')}
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="agregarFilaTarjeta()">➕ Agregar Tarjeta</button>
+        </div>
+
+        <div style="margin-top:16px;">
+          <button class="btn btn-primary btn-sm" onclick="saveCatalogos()">💾 Guardar Catálogos</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Respaldar / Importar -->
+  <div class="config-panel" id="cfg-backup">
+    <div class="card">
+      <div class="card-header"><span class="card-title">💾 Respaldar y Restaurar Configuración</span></div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--text-label);margin-bottom:20px;">
+          Descarga tu configuración personalizada (WhatsApp, correos, catálogos, tarjetas) como archivo JSON para archivar o transferir a otro dispositivo.
+        </p>
+
+        <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px;">
+          <h4 style="font-size:13px;margin-bottom:6px;">📥 Descargar configuración actual</h4>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+            Guarda todas las plantillas, catálogos y números configurados como archivo <code>.json</code>.
+          </p>
+          <button class="btn btn-primary btn-sm" onclick="descargarConfig()">⬇️ Descargar configuración.json</button>
+        </div>
+
+        <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px;">
+          <h4 style="font-size:13px;margin-bottom:6px;">📤 Importar configuración desde archivo</h4>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+            Carga un archivo <code>.json</code> previamente descargado para restaurar tu configuración.
+          </p>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <input type="file" id="import-cfg-file" accept=".json" style="display:none" onchange="importarConfig(this)">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('import-cfg-file').click()">📂 Seleccionar archivo .json</button>
+            <span id="import-cfg-status" style="font-size:12px;color:var(--text-muted);"></span>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:18px;">
+          <h4 style="font-size:13px;margin-bottom:6px;">📋 Descargar solicitudes (respaldo de datos)</h4>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+            Descarga todas las solicitudes registradas en formato JSON como respaldo de la base de datos local.
+          </p>
+          <button class="btn btn-secondary btn-sm" onclick="descargarSolicitudes()">⬇️ Descargar solicitudes.json</button>
+        </div>
+
+        <div style="background:var(--red-bg);border:1px solid var(--red);border-radius:var(--radius);padding:18px;margin-top:12px;">
+          <h4 style="font-size:13px;margin-bottom:4px;color:var(--red);">⚠️ Zona de peligro — Restablecer sistema</h4>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+            Elimina <strong>todos los datos</strong> del sistema (solicitudes, usuarios, configuración) y restaura los valores iniciales. Esta acción no se puede deshacer.
+          </p>
+          <button class="btn btn-danger btn-sm" onclick="confirmarResetSistema()">🗑 Restablecer todo el sistema</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  window._tarjetaCount = (cfg.tarjetas||[]).length;
+}
+
+function switchConfigTab(tab, btn) {
+  document.querySelectorAll('.config-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.config-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(`cfg-${tab}`).classList.add('active');
+}
+
+function insertVar(e, v) {
+  // Insert variable into last focused textarea
+  const active = document.activeElement;
+  if (active && active.tagName === 'TEXTAREA') {
+    const start = active.selectionStart, end = active.selectionEnd;
+    active.value = active.value.slice(0,start) + v + active.value.slice(end);
+    active.selectionStart = active.selectionEnd = start + v.length;
+    active.focus();
+  } else {
+    toast(`Variable copiada: ${v}`, 'info');
+  }
+}
+
+function saveConfigWA() {
+  const cfg = DB.getConfig();
+  cfg.whatsapp = {
+    numeroFinanzas:     document.getElementById('wa-numero').value,
+    plantillaAprobacion: document.getElementById('wa-aprobacion').value,
+    plantillaRechazo:   document.getElementById('wa-rechazo').value,
+    plantillaCierre:    document.getElementById('wa-cierre').value,
+  };
+  DB.saveConfig(cfg);
+  toast('Configuración WhatsApp guardada ✅', 'success');
+}
+
+function saveConfigEmail() {
+  const cfg = DB.getConfig();
+  cfg.email = {
+    correoFinanzas:   document.getElementById('em-finanzas').value,
+    asuntoAprobacion: document.getElementById('em-asunto-ap').value,
+    cuerpoAprobacion: document.getElementById('em-cuerpo-ap').value,
+    asuntoRechazo:    document.getElementById('em-asunto-re').value,
+    cuerpoRechazo:    document.getElementById('em-cuerpo-re').value,
+    firma:            document.getElementById('em-firma').value,
+  };
+  DB.saveConfig(cfg);
+  toast('Configuración de correo guardada ✅', 'success');
+}
+
+function saveCatalogos() {
+  const cfg = DB.getConfig();
+  cfg.proyectos = document.getElementById('cat-proyectos').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  cfg.monedas   = document.getElementById('cat-monedas').value.split('\n').map(s=>s.trim()).filter(Boolean);
+
+  // Collect tarjetas from dynamic rows
+  const tarjetas = [];
+  const count = window._tarjetaCount || 0;
+  for (let i = 0; i < count + 20; i++) {
+    const numEl = document.getElementById(`t-num-${i}`);
+    const aliEl = document.getElementById(`t-ali-${i}`);
+    const empEl = document.getElementById(`t-emp-${i}`);
+    if (numEl && numEl.value.trim()) {
+      tarjetas.push({
+        numero:  numEl.value.trim(),
+        alias:   aliEl ? aliEl.value.trim() : '',
+        empresa: empEl ? empEl.value.trim() : '',
+      });
+    }
+  }
+  cfg.tarjetas = tarjetas;
+  DB.saveConfig(cfg);
+  toast('Catálogos y tarjetas actualizados ✅', 'success');
+}
+
+function agregarFilaTarjeta() {
+  const list = document.getElementById('tarjetas-list');
+  const i = window._tarjetaCount;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:grid;grid-template-columns:2fr 2fr 2fr auto;gap:6px;align-items:center;';
+  row.id = `tarjeta-row-${i}`;
+  row.innerHTML = `
+    <input type="text" class="form-control" id="t-num-${i}" placeholder="4111 **** **** 1234">
+    <input type="text" class="form-control" id="t-ali-${i}" placeholder="Alias o descripción">
+    <input type="text" class="form-control" id="t-emp-${i}" placeholder="Empresa emisora">
+    <button class="btn btn-danger btn-xs btn-icon" onclick="eliminarTarjeta(${i})" title="Eliminar">🗑</button>`;
+  list.appendChild(row);
+  window._tarjetaCount = i + 1;
+  document.getElementById(`t-num-${i}`).focus();
+}
+
+function eliminarTarjeta(i) {
+  const row = document.getElementById(`tarjeta-row-${i}`);
+  if (row) row.remove();
+}
+
+function descargarConfig() {
+  const cfg = DB.getConfig();
+  const json = JSON.stringify(cfg, null, 2);
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const ts   = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `GTC-configuracion-${ts}.json`; a.click();
+  URL.revokeObjectURL(url);
+  toast('Configuración descargada ✅', 'success');
+}
+
+function descargarSolicitudes() {
+  const sols = DB.getSolicitudes();
+  const json = JSON.stringify(sols, null, 2);
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const ts   = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `GTC-solicitudes-${ts}.json`; a.click();
+  URL.revokeObjectURL(url);
+  toast('Solicitudes descargadas ✅', 'success');
+}
+
+function importarConfig(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('import-cfg-status');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const cfg = JSON.parse(e.target.result);
+      if (!cfg.whatsapp && !cfg.email && !cfg.proyectos) {
+        status.textContent = '❌ Archivo no válido — no parece una configuración GTC';
+        status.style.color = 'var(--red)'; return;
+      }
+      DB.saveConfig(cfg);
+      status.textContent = '✅ Configuración importada correctamente';
+      status.style.color = 'var(--green)';
+      toast('Configuración importada ✅', 'success');
+      setTimeout(() => renderConfig(document.getElementById('page-content')), 800);
+    } catch(err) {
+      status.textContent = '❌ Error al leer el archivo JSON';
+      status.style.color = 'var(--red)';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function confirmarResetSistema() {
+  openModal(`<div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <span class="modal-title">⚠️ Restablecer Sistema</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--red-bg);border:1px solid var(--red);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
+        <p style="font-size:13px;color:var(--red);font-weight:700;margin-bottom:4px;">⚠️ Esta acción eliminará TODOS los datos</p>
+        <p style="font-size:12px;color:var(--text-label);">Se borrarán todas las solicitudes, usuarios y configuración. El sistema volverá al estado inicial con solo el usuario administrador.</p>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);">Se recomienda descargar un respaldo antes de continuar.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-danger btn-sm" onclick="ejecutarResetSistema()">🗑 Sí, restablecer todo</button>
+    </div>
+  </div>`);
+}
+
+function ejecutarResetSistema() {
+  DB.reset();
+  closeModal();
+  BL.logout();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  toast('Sistema restablecido. Ingresa con las credenciales iniciales.', 'info');
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE — INFO TÉCNICA
+   ══════════════════════════════════════════════════════ */
+function renderInfo(el) {
+  setPage('Evaluación Técnica', 'Análisis de plataforma recomendada');
+  el.innerHTML = `
+  <div style="max-width:800px;">
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header"><span class="card-title">🔍 Análisis: ¿Qué plataforma elegir?</span></div>
+      <div class="card-body">
+        <p style="color:var(--text-label);margin-bottom:20px;font-size:14px;">Evaluación de cuatro opciones para este sistema de gestión de tarjetas corporativas.</p>
+
+        ${[
+          { plat:'🌐 Web App (actual)', pros:['Acceso universal por URL, sin instalación','Fácil de mantener y actualizar en un solo lugar','Integración directa con APIs de notificaciones','Adecuado para flujos complejos de aprobación','Funciona en cualquier dispositivo con browser'], cons:['Requiere conexión a internet','No tiene acceso nativo a hardware del dispositivo'], rec:false },
+          { plat:'📱 PWA (recomendada fase 2)', pros:['Instala como app sin tiendas de aplicaciones','Funciona offline con Service Workers','Push notifications nativas','Mismo código base que la web app','Cero costo adicional de desarrollo si ya tienes la web'], cons:['Push notifications iOS limitadas (mejoró en iOS 16+)','No accede a hardware especializado'], rec:true },
+          { plat:'📱 App Móvil (React Native / Flutter)', pros:['Experiencia nativa premium','Acceso completo a cámara, GPS, biometría','Distribución por App Store / Play Store'], cons:['Costo de desarrollo 3-5x mayor','Requiere cuentas de desarrollador ($99/año Apple)','Ciclo de actualización lento (revisión de tienda)','Para este caso de uso, sobredimensionado'], rec:false },
+          { plat:'🔌 Extensión Chrome/Edge', pros:['Puede capturar datos de páginas web externas','Útil para integrar con internet banking'], cons:['NO adecuada para este sistema: no puede manejar formularios complejos, roles, archivos, reportes y aprobaciones como app standalone','Restringida al browser, no funciona en móvil','Distribución compleja (Chrome Web Store requiere revisión)','Solo convendría como complemento futuro para captura de datos desde banca en línea'], rec:false },
+        ].map(item => `
+        <div style="background:var(--bg-input);border:1px solid ${item.rec?'var(--green)':'var(--border)'};border-radius:var(--radius);padding:16px;margin-bottom:12px;position:relative;">
+          ${item.rec ? '<span class="badge badge-green" style="position:absolute;top:12px;right:12px;">⭐ RECOMENDADA</span>' : ''}
+          <h3 style="font-size:15px;margin-bottom:10px;">${item.plat}</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <p style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px;text-transform:uppercase;">✅ Ventajas</p>
+              <ul style="font-size:12px;color:var(--text-label);padding-left:14px;">
+                ${item.pros.map(p=>`<li style="margin-bottom:3px;">${p}</li>`).join('')}
+              </ul>
+            </div>
+            <div>
+              <p style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:6px;text-transform:uppercase;">⚠️ Limitaciones</p>
+              <ul style="font-size:12px;color:var(--text-muted);padding-left:14px;">
+                ${item.cons.map(c=>`<li style="margin-bottom:3px;">${c}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+        </div>`).join('')}
+
+        <div style="background:var(--accent-glow);border:1px solid var(--accent);border-radius:var(--radius);padding:16px;margin-top:8px;">
+          <h3 style="font-size:14px;margin-bottom:8px;color:var(--accent);">🏆 Recomendación final</h3>
+          <p style="font-size:13px;color:var(--text-label);line-height:1.7;">
+            <strong style="color:var(--text-primary);">Fase 1 (actual):</strong> Web App HTML/JS con LocalStorage — ideal para validar flujo y UI.<br>
+            <strong style="color:var(--text-primary);">Fase 2:</strong> Convertir a PWA agregando manifest.json y Service Worker — sin reescribir código.<br>
+            <strong style="color:var(--text-primary);">Fase 3:</strong> Backend real (Node.js/Supabase) + notificaciones reales (WhatsApp Business API + SendGrid).<br>
+            <strong style="color:var(--text-primary);">Extensión Chrome:</strong> Solo si en el futuro se necesita capturar datos desde internet banking automáticamente.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="card-title">🗺️ Hoja de Ruta para App Móvil</span></div>
+      <div class="card-body">
+        <div style="display:grid;gap:12px;">
+          ${[
+            ['1','Validación Web', 'Probar todos los módulos en esta versión HTML. Recopilar feedback de usuarios.','var(--blue)'],
+            ['2','Backend Real', 'Migrar datos a Supabase o Firebase. Implementar autenticación real. API REST.','var(--purple)'],
+            ['3','PWA', 'Agregar manifest.json, Service Worker, push notifications. Sin reescribir UI.','var(--green)'],
+            ['4','React Native (opcional)', 'Si se necesita experiencia nativa: compartir lógica de negocio (BL.*) tal cual. Solo reescribir la UI.','var(--orange)'],
+          ].map(([n,t,d,c])=>`
+          <div style="display:flex;gap:14px;align-items:flex-start;">
+            <div style="width:32px;height:32px;border-radius:50%;background:${c};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;">${n}</div>
+            <div>
+              <p style="font-weight:700;font-size:13px;">${t}</p>
+              <p style="font-size:12px;color:var(--text-muted);">${d}</p>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   MODALS — Decisión Finanzas
+   ══════════════════════════════════════════════════════ */
+function modalDecision(id, tipo) {
+  const s = DB.getSolicitud(id);
+  const isAprobar = tipo === 'aprobar';
+  // Find the solicitante user to pre-fill their contact data
+  const solUser = DB.getUsuarios().find(u => u.id === s.solicitanteId) || {};
+  const waDestino    = solUser.whatsapp || '';
+  const emailDestino = solUser.email    || '';
+
+  openModal(`<div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <span class="modal-title">${isAprobar?'✅ Aprobar':'❌ Rechazar'} Solicitud ${id}</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Resumen solicitud -->
+      <div style="background:var(--bg-input);border-radius:var(--radius);padding:14px;margin-bottom:18px;font-size:13px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Solicitante</span><br><strong>${s.solicitante}</strong></div>
+          <div><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Proyecto</span><br><strong>${s.proyecto}</strong></div>
+          <div><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Monto</span><br><span style="color:var(--accent);font-weight:700;">${moneyFmt(s.montoSolicitado, s.moneda)}</span></div>
+          <div><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Fecha</span><br>${s.fechaSolicitud}</div>
+        </div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted);">${s.asunto}</div>
+      </div>
+
+      <!-- Comentario -->
+      <div class="form-group">
+        <label class="form-label">Comentario ${isAprobar?'(opcional)':'(requerido)'}</label>
+        <textarea id="dec-comentario" class="form-control" rows="2" placeholder="${isAprobar?'Comentarios internos para el solicitante...':'Motivo del rechazo (visible para el solicitante)...'}"></textarea>
+      </div>
+
+      <!-- ── MODO DE ENVÍO ───────────────────────────────────────────── -->
+      <div style="background:var(--bg-input);border:1px solid var(--border-light);border-radius:var(--radius);padding:14px;margin-bottom:4px;">
+        <p style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">📣 Notificación al solicitante</p>
+
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+
+          <!-- Simultáneo -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px;border-radius:var(--radius-sm);border:2px solid var(--accent);background:var(--accent-glow);">
+            <input type="radio" name="dec-envio" value="ambos" id="env-ambos" checked style="margin-top:2px;accent-color:var(--accent);">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text-primary);">📱 + 📧 Envío simultáneo</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Envía por WhatsApp y correo electrónico al mismo tiempo</div>
+            </div>
+          </label>
+
+          <!-- Solo WhatsApp -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border-light);" id="lbl-wa">
+            <input type="radio" name="dec-envio" value="whatsapp" id="env-wa" style="margin-top:2px;accent-color:var(--accent);">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text-primary);">📱 Solo WhatsApp</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Solo mensaje de WhatsApp</div>
+            </div>
+          </label>
+
+          <!-- Solo Correo -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border-light);" id="lbl-email">
+            <input type="radio" name="dec-envio" value="email" id="env-email" style="margin-top:2px;accent-color:var(--accent);">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text-primary);">📧 Solo correo</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Solo correo electrónico</div>
+            </div>
+          </label>
+
+          <!-- Sin notificación -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border-light);" id="lbl-none">
+            <input type="radio" name="dec-envio" value="ninguno" id="env-ninguno" style="margin-top:2px;accent-color:var(--accent);">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text-primary);">🔕 Sin notificación</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Solo registrar la decisión sin notificar</div>
+            </div>
+          </label>
+        </div>
+
+        <!-- Contacto del solicitante -->
+        <div style="border-top:1px solid var(--border);padding-top:12px;">
+          <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">Datos de contacto del solicitante:</p>
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" style="font-size:10px;">📱 WhatsApp destino</label>
+              <input type="tel" id="dec-wa-dest" class="form-control" value="${waDestino}" placeholder="+51999888777"
+                style="font-size:12px;">
+              <div class="form-hint">${waDestino ? '✅ Tomado del perfil del usuario' : '⚠️ El usuario no tiene WhatsApp registrado'}</div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" style="font-size:10px;">📧 Correo destino</label>
+              <input type="email" id="dec-email-dest" class="form-control" value="${emailDestino}" placeholder="usuario@empresa.com"
+                style="font-size:12px;">
+              <div class="form-hint">${emailDestino ? '✅ Tomado del perfil del usuario' : '⚠️ Sin correo registrado'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="dec-error" class="form-error" style="margin-top:8px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn ${isAprobar?'btn-success':'btn-danger'} btn-sm" onclick="ejecutarDecision('${id}','${tipo}')">
+        ${isAprobar?'✅ Aprobar y Notificar':'❌ Rechazar y Notificar'}
+      </button>
+    </div>
+  </div>`);
+
+  // Style radio labels on change
+  document.querySelectorAll('input[name="dec-envio"]').forEach(r => {
+    r.addEventListener('change', () => {
+      document.querySelectorAll('label[id^="lbl-"], label:has(#env-ambos)').forEach(l => {
+        l.style.borderColor = 'var(--border-light)';
+        l.style.background  = 'transparent';
+      });
+      const lbl = r.closest('label');
+      if (lbl) { lbl.style.borderColor = 'var(--accent)'; lbl.style.background = 'var(--accent-glow)'; }
+    });
+  });
+}
+
+function ejecutarDecision(id, tipo) {
+  const com     = document.getElementById('dec-comentario').value;
+  const modo    = document.querySelector('input[name="dec-envio"]:checked')?.value || 'ambos';
+  const waNum   = document.getElementById('dec-wa-dest')?.value.trim()    || '';
+  const emailTo = document.getElementById('dec-email-dest')?.value.trim() || '';
+  const err     = document.getElementById('dec-error');
+
+  if (tipo === 'rechazar' && !com.trim()) {
+    err.textContent = 'Indique el motivo del rechazo.'; return;
+  }
+  if (modo !== 'ninguno' && (modo === 'whatsapp' || modo === 'ambos') && !waNum) {
+    err.textContent = '⚠️ Ingrese el número de WhatsApp del solicitante o cambie el modo de envío.'; return;
+  }
+  if (modo !== 'ninguno' && (modo === 'email' || modo === 'ambos') && !emailTo) {
+    err.textContent = '⚠️ Ingrese el correo del solicitante o cambie el modo de envío.'; return;
+  }
+
+  const sol = tipo === 'aprobar' ? BL.aprobarSolicitud(id, com) : BL.rechazarSolicitud(id, com);
+
+  // Store send preferences for notification display
+  const tipoNotif = tipo === 'aprobar' ? 'aprobacion' : 'rechazo';
+  BL._notificarConDatos(sol, tipoNotif, { modo, waNum, emailTo });
+
+  closeModal();
+  toast(`Solicitud ${tipo === 'aprobar' ? 'aprobada' : 'rechazada'} ✅`, tipo === 'aprobar' ? 'success' : 'error');
+  if (modo !== 'ninguno') mostrarNotificacion(id);
+  routeTo('pendientes');
+}
+
+/* ══════════════════════════════════════════════════════
+   MODALS — Entrega
+   ══════════════════════════════════════════════════════ */
+function modalEntrega(id) {
+  const s = DB.getSolicitud(id);
+  const u = BL.currentUser();
+  const cfg = DB.getConfig();
+  const tarjetas = cfg.tarjetas || [];
+  const today = new Date().toISOString().split('T')[0];
+
+  openModal(`<div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">💳 Marcar Entrega Física — ${id}</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--bg-input);border-radius:var(--radius);padding:14px;margin-bottom:16px;font-size:13px;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Solicitante / Proyecto</div>
+        <strong>${s.solicitante}</strong> — ${s.proyecto}<br>
+        <span style="color:var(--accent);font-size:14px;font-weight:700;">${moneyFmt(s.montoSolicitado, s.moneda)}</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Número de Tarjeta <span class="req">*</span></label>
+        ${tarjetas.length
+          ? `<select id="ent-tarjeta" class="form-control">
+              <option value="">— Seleccionar tarjeta —</option>
+              ${tarjetas.map(t => `<option value="${t.numero}">${t.numero}${t.alias ? ' — ' + t.alias : ''}${t.empresa ? ' | ' + t.empresa : ''}</option>`).join('')}
+             </select>
+             <div class="form-hint">💡 Tarjetas configuradas en Configuración → Catálogos</div>`
+          : `<div style="background:var(--orange-bg);border:1px solid var(--orange);border-radius:var(--radius-sm);padding:10px;font-size:12px;color:var(--orange);">
+              ⚠️ No hay tarjetas registradas. Ve a <strong>Configuración → Catálogos</strong> para agregar números de tarjeta.
+             </div>`
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Responsable de entrega</label>
+        <input type="text" id="ent-resp" class="form-control" value="${u.nombre}" readonly
+          style="background:var(--bg-base);color:var(--text-muted);cursor:not-allowed;opacity:.8;">
+        <div class="form-hint">📌 Registrado automáticamente como el usuario actual</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Fecha de entrega</label>
+        <input type="date" id="ent-fecha" class="form-control" value="${today}" readonly
+          style="background:var(--bg-base);color:var(--text-muted);cursor:not-allowed;opacity:.8;">
+        <div class="form-hint">📌 Siempre se registra la fecha de hoy</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Comentarios internos</label>
+        <textarea id="ent-com" class="form-control" rows="2" placeholder="Observaciones adicionales sobre la entrega..."></textarea>
+      </div>
+      <div id="ent-error" class="form-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="ejecutarEntrega('${id}')">💳 Confirmar Entrega</button>
+    </div>
+  </div>`);
+}
+
+function ejecutarEntrega(id) {
+  const tarjetaEl = document.getElementById('ent-tarjeta');
+  const tarjeta = tarjetaEl ? tarjetaEl.value : '';
+  if (tarjetaEl && !tarjeta) {
+    document.getElementById('ent-error').textContent = 'Seleccione el número de tarjeta a entregar.'; return;
+  }
+  BL.marcarEntregada(id, {
+    responsable:  document.getElementById('ent-resp').value,
+    fechaEntrega: document.getElementById('ent-fecha').value,
+    comentario:   (tarjeta ? `Tarjeta: ${tarjeta}. ` : '') + document.getElementById('ent-com').value,
+    numeroTarjeta: tarjeta,
+  });
+  closeModal();
+  toast('Tarjeta marcada como entregada 💳', 'success');
+  routeTo('entrega');
+}
+
+/* ══════════════════════════════════════════════════════
+   MODALS — Cierre
+   ══════════════════════════════════════════════════════ */
+function modalCierre(id) {
+  const s = DB.getSolicitud(id);
+  openModal(`<div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <span class="modal-title">🔒 Cerrar Solicitud — ${id}</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--bg-input);border-radius:var(--radius);padding:14px;margin-bottom:16px;font-size:13px;">
+        <strong>${s.solicitante}</strong> — ${s.proyecto}<br>
+        Monto aprobado: <span style="color:var(--accent);">${moneyFmt(s.montoSolicitado, s.moneda)}</span>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Monto Consumido <span class="req">*</span></label>
+          <input type="number" id="cie-monto" class="form-control" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha de Cierre <span class="req">*</span></label>
+          <input type="date" id="cie-fecha" class="form-control" value="${new Date().toISOString().split('T')[0]}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Comentario del gasto <span class="req">*</span></label>
+        <textarea id="cie-com" class="form-control" rows="2" placeholder="Describe brevemente en qué se gastó..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Factura (JPG/PNG/PDF)</label>
+          <div class="file-drop" onclick="document.getElementById('cie-factura').click()" id="drop-factura">
+            <div class="file-icon">🧾</div>
+            <p><strong>Clic para subir</strong> o arrastra el archivo</p>
+            <p style="font-size:11px;margin-top:4px;">JPG, PNG, PDF — máx 5MB</p>
+          </div>
+          <input type="file" id="cie-factura" style="display:none" accept=".jpg,.jpeg,.png,.pdf" onchange="previewFile(this,'drop-factura','prev-factura')">
+          <div id="prev-factura" class="file-preview"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Voucher de pago (JPG/PNG/PDF)</label>
+          <div class="file-drop" onclick="document.getElementById('cie-voucher').click()" id="drop-voucher">
+            <div class="file-icon">🏧</div>
+            <p><strong>Clic para subir</strong> o arrastra el archivo</p>
+            <p style="font-size:11px;margin-top:4px;">JPG, PNG, PDF — máx 5MB</p>
+          </div>
+          <input type="file" id="cie-voucher" style="display:none" accept=".jpg,.jpeg,.png,.pdf" onchange="previewFile(this,'drop-voucher','prev-voucher')">
+          <div id="prev-voucher" class="file-preview"></div>
+        </div>
+      </div>
+      <div id="cie-error" class="form-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="ejecutarCierre('${id}')">🔒 Registrar Cierre</button>
+    </div>
+  </div>`);
+}
+
+async function previewFile(input, dropId, prevId) {
+  const file = input.files[0];
+  if (!file) return;
+  const drop = document.getElementById(dropId);
+  const prev = document.getElementById(prevId);
+  drop.innerHTML = `<p style="font-size:12px;color:var(--green);">✅ ${file.name} (${(file.size/1024).toFixed(1)}KB)</p>`;
+  if (file.type.startsWith('image/')) {
+    const data = await readFileAsBase64(file);
+    prev.innerHTML = `<img src="${data}" alt="preview">`;
+  } else if (file.type === 'application/pdf') {
+    prev.innerHTML = `<div class="pdf-badge">📄 PDF: ${file.name}</div>`;
+  }
+}
+
+async function ejecutarCierre(id) {
+  const monto = document.getElementById('cie-monto').value;
+  const com   = document.getElementById('cie-com').value;
+  const err   = document.getElementById('cie-error');
+  if (!monto || parseFloat(monto) < 0) { err.textContent = 'Ingrese el monto consumido.'; return; }
+  if (!com.trim()) { err.textContent = 'Ingrese un comentario del gasto.'; return; }
+  const factInput = document.getElementById('cie-factura');
+  const voucInput = document.getElementById('cie-voucher');
+  let factura = null, voucher = null;
+  if (factInput.files[0]) factura = await readFileAsBase64(factInput.files[0]);
+  if (voucInput.files[0]) voucher = await readFileAsBase64(voucInput.files[0]);
+  BL.cerrarSolicitud(id, { montoConsumido: monto, fechaCierre: document.getElementById('cie-fecha').value, comentarioCierre: com, factura, voucher });
+  closeModal();
+  toast('Cierre registrado. Pendiente de validación por Finanzas ✅', 'success');
+  routeTo('mis');
+}
+
+/* ══════════════════════════════════════════════════════
+   MODALS — Observar
+   ══════════════════════════════════════════════════════ */
+function modalObservar(id) {
+  openModal(`<div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <span class="modal-title">⚠️ Observar Cierre — ${id}</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Motivo de la observación <span class="req">*</span></label>
+        <textarea id="obs-motivo" class="form-control" rows="3" placeholder="Descripción de la inconsistencia encontrada..."></textarea>
+      </div>
+      <div id="obs-error" class="form-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-warning btn-sm" onclick="ejecutarObservar('${id}')">⚠️ Marcar como Observado</button>
+    </div>
+  </div>`);
+}
+
+function ejecutarObservar(id) {
+  const motivo = document.getElementById('obs-motivo').value;
+  if (!motivo.trim()) { document.getElementById('obs-error').textContent = 'Ingrese el motivo.'; return; }
+  BL.observarCierre(id, motivo);
+  closeModal();
+  toast('Solicitud marcada como observada ⚠️', 'warning');
+  routeTo('validacion');
+}
+
+/* ══════════════════════════════════════════════════════
+   ACCIONES DIRECTAS
+   ══════════════════════════════════════════════════════ */
+function validarCierre(id) {
+  BL.validarCierre(id);
+  toast('Cierre validado por Finanzas ✅', 'success');
+  mostrarNotificacion(id);
+  routeTo('validacion');
+}
+
+function mostrarNotificacion(solId) {
+  const n = JSON.parse(sessionStorage.getItem('gtc_last_notification') || 'null');
+  if (!n || n.sol !== solId) return;
+
+  const modo    = n.modo || 'ambos';
+  const wa      = n.whatsapp?.mensaje || '';
+  const waNum   = n.whatsapp?.numero  || '';
+  const waEnc   = encodeURIComponent(wa);
+  const emailTo = n.email?.destino    || '';
+
+  const showWA    = modo === 'whatsapp' || modo === 'ambos';
+  const showEmail = modo === 'email'    || modo === 'ambos';
+
+  const modoBadge = {
+    ambos:    '<span class="badge badge-blue">📱 + 📧 Envío simultáneo</span>',
+    whatsapp: '<span class="badge badge-green">📱 Solo WhatsApp</span>',
+    email:    '<span class="badge badge-purple">📧 Solo correo</span>',
+  }[modo] || '';
+
+  openModal(`<div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <span class="modal-title">📣 Notificación al Solicitante</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        ${modoBadge}
+        <span style="font-size:12px;color:var(--text-muted);">En producción se enviaría automáticamente vía API</span>
+      </div>
+
+      ${showWA ? `
+      <div class="notif-preview" style="margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <h4 style="margin:0;">📱 WhatsApp → <span style="color:var(--green);">${waNum}</span></h4>
+          <button class="btn btn-success btn-xs" onclick="abrirWhatsApp('${waEnc}','${waNum}')">Abrir WhatsApp ↗</button>
+        </div>
+        <pre class="notif-wa">${wa}</pre>
+      </div>` : ''}
+
+      ${showEmail ? `
+      <div class="notif-preview">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <h4 style="margin:0;">📧 Correo → <span style="color:var(--accent);">${emailTo}</span></h4>
+          <button class="btn btn-secondary btn-xs" onclick="abrirMailto('${encodeURIComponent(n.email?.asunto||'')}','${encodeURIComponent(n.email?.cuerpo||'')}','${emailTo}')">Abrir correo ↗</button>
+        </div>
+        <div style="background:var(--bg-base);border-radius:var(--radius-sm);padding:10px;margin-bottom:6px;">
+          <span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Asunto:</span>
+          <div style="font-size:13px;color:var(--text-primary);margin-top:2px;">${n.email?.asunto||''}</div>
+        </div>
+        <pre class="notif-email">${n.email?.cuerpo||''}</pre>
+      </div>` : ''}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>
+      ${showWA    ? `<button class="btn btn-success btn-sm" onclick="abrirWhatsApp('${waEnc}','${waNum}')">📱 Abrir WhatsApp</button>` : ''}
+      ${showEmail ? `<button class="btn btn-primary btn-sm" onclick="abrirMailto('${encodeURIComponent(n.email?.asunto||'')}','${encodeURIComponent(n.email?.cuerpo||'')}','${emailTo}')">📧 Abrir correo</button>` : ''}
+    </div>
+  </div>`);
+}
+
+function abrirWhatsApp(msg, numero) {
+  const num = numero.replace(/\D/g,'');
+  window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
+}
+
+function abrirMailto(asunto, cuerpo, dest) {
+  window.location.href = `mailto:${dest}?subject=${asunto}&body=${cuerpo}`;
+}
+
+/* ══════════════════════════════════════════════════════
+   MODAL — VER DETALLE
+   ══════════════════════════════════════════════════════ */
+function verDetalle(id) {
+  const s = DB.getSolicitud(id);
+  if (!s) return;
+  openModal(`<div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <span class="modal-title">📋 Solicitud ${s.id}</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        ${[
+          ['Solicitante', s.solicitante],
+          ['Proyecto', s.proyecto],
+          ['Moneda', s.moneda],
+          ['Monto Solicitado', moneyFmt(s.montoSolicitado)],
+          ['Monto Consumido', s.montoConsumido != null ? moneyFmt(s.montoConsumido) : '—'],
+          ['Estado', BL.estadoLabel(s.estado)],
+          ['Fecha Solicitud', s.fechaSolicitud],
+          ['Fecha Decisión', s.fechaDecision || '—'],
+          ['Entregado por', s.responsableFinanzas || '—'],
+          ['Fecha Entrega', s.fechaEntrega || '—'],
+        ].map(([k,v])=>`<div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:10px;">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">${k}</div>
+          <div style="font-size:13px;font-weight:600;">${v}</div>
+        </div>`).join('')}
+      </div>
+      <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:10px;margin-bottom:14px;">
+        <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Asunto</div>
+        <div style="font-size:13px;">${s.asunto}</div>
+      </div>
+      ${s.comentariosFinanzas ? `<div style="background:var(--blue-bg);border:1px solid var(--blue);border-radius:var(--radius-sm);padding:10px;margin-bottom:14px;font-size:12px;">
+        <strong>Comentario Finanzas:</strong> ${s.comentariosFinanzas}</div>` : ''}
+      ${s.comentarioCierre ? `<div style="background:var(--green-bg);border:1px solid var(--green);border-radius:var(--radius-sm);padding:10px;margin-bottom:14px;font-size:12px;">
+        <strong>Comentario cierre:</strong> ${s.comentarioCierre}</div>` : ''}
+
+      ${(s.factura||s.voucher) ? `<div style="margin-bottom:14px;">
+        <p style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;">Documentos adjuntos</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          ${s.factura ? `<div><p style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Factura</p>
+            ${s.factura.startsWith('data:image') ? `<img src="${s.factura}" style="max-height:100px;border-radius:var(--radius-sm);border:1px solid var(--border);">` : `<span class="badge badge-red">📄 PDF</span>`}
+          </div>` : ''}
+          ${s.voucher ? `<div><p style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Voucher</p>
+            ${s.voucher.startsWith('data:image') ? `<img src="${s.voucher}" style="max-height:100px;border-radius:var(--radius-sm);border:1px solid var(--border);">` : `<span class="badge badge-red">📄 PDF</span>`}
+          </div>` : ''}
+        </div>
+      </div>` : ''}
+
+      <p style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;">Historial</p>
+      <ul class="timeline">
+        ${s.historial.map(h=>`<li class="timeline-item">
+          <div class="timeline-date">${h.fecha}</div>
+          <div class="timeline-action">${h.accion}</div>
+          <div class="timeline-user">${h.usuario}</div>
+        </li>`).join('')}
+      </ul>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cerrar</button>
+      ${BL.currentUser()?.rol !== 'solicitante' && s.estado === 'pendiente_validacion' ? `
+        <button class="btn btn-success btn-sm" onclick="closeModal();validarCierre('${id}')">✅ Validar Cierre</button>
+        <button class="btn btn-warning btn-sm" onclick="closeModal();modalObservar('${id}')">⚠️ Observar</button>` : ''}
+    </div>
+  </div>`);
+}
+
+/* ══════════════════════════════════════════════════════
+   MODAL — USUARIO
+   ══════════════════════════════════════════════════════ */
+function modalNuevoUsuario() {
+  const cfg = DB.getConfig();
+  const appUrl = window.location.href.split('?')[0].split('#')[0];
+
+  openModal(`<div class="modal" style="max-width:520px;">
+    <div class="modal-header"><span class="modal-title">➕ Nuevo Usuario</span><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+
+      <div class="form-group"><label class="form-label">Nombre completo <span class="req">*</span></label>
+        <input type="text" id="nu-nombre" class="form-control" placeholder="Ej. Juan Pérez" oninput="actualizarVistaPrevia()">
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Correo electrónico <span class="req">*</span></label>
+          <input type="email" id="nu-email" class="form-control" placeholder="usuario@empresa.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">WhatsApp</label>
+          <input type="tel" id="nu-whatsapp" class="form-control" placeholder="+51999888777">
+          <div class="form-hint">Con código de país</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Contraseña temporal <span class="req">*</span></label>
+          <input type="text" id="nu-pass" class="form-control" value="1234" oninput="actualizarVistaPrevia()">
+        </div>
+        <div class="form-group"><label class="form-label">Rol <span class="req">*</span></label>
+          <select id="nu-rol" class="form-control">
+            <option value="solicitante">Solicitante</option>
+            <option value="finanzas">Finanzas</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ── ENVÍO DE ACCESO ─────────────────────────────────────────── -->
+      <div style="background:var(--bg-input);border:1px solid var(--border-light);border-radius:var(--radius);padding:14px;margin-top:4px;">
+        <p style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">📣 Enviar acceso al usuario</p>
+
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-light);background:transparent;" id="lbl-send-ninguno">
+            <input type="radio" name="nu-envio" value="ninguno" id="send-ninguno" checked style="accent-color:var(--accent);" onchange="onSendModeChange()">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text-primary);">🔕 Solo crear usuario</div>
+              <div style="font-size:11px;color:var(--text-muted);">Sin enviar notificación</div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-light);background:transparent;" id="lbl-send-ambos">
+            <input type="radio" name="nu-envio" value="ambos" id="send-ambos" style="accent-color:var(--accent);" onchange="onSendModeChange()">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text-primary);">📱 + 📧 WhatsApp y correo</div>
+              <div style="font-size:11px;color:var(--text-muted);">Envía el link y credenciales por ambos canales</div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-light);background:transparent;" id="lbl-send-whatsapp">
+            <input type="radio" name="nu-envio" value="whatsapp" id="send-whatsapp" style="accent-color:var(--accent);" onchange="onSendModeChange()">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text-primary);">📱 Solo WhatsApp</div>
+              <div style="font-size:11px;color:var(--text-muted);">Mensaje con link y contraseña temporal</div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-light);background:transparent;" id="lbl-send-email">
+            <input type="radio" name="nu-envio" value="email" id="send-email" style="accent-color:var(--accent);" onchange="onSendModeChange()">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text-primary);">📧 Solo correo</div>
+              <div style="font-size:11px;color:var(--text-muted);">Correo con link y contraseña temporal</div>
+            </div>
+          </label>
+        </div>
+
+        <!-- Vista previa del mensaje -->
+        <div id="send-preview" style="display:none;">
+          <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
+            <p style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:8px;">Vista previa del mensaje:</p>
+            <pre id="send-preview-text" style="font-size:11px;color:var(--text-label);background:var(--bg-base);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;white-space:pre-wrap;word-break:break-word;line-height:1.6;max-height:140px;overflow-y:auto;"></pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="nu-error" class="form-error" style="margin-top:8px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="btn-crear-usuario" onclick="crearUsuario()">Crear y Enviar →</button>
+    </div>
+  </div>`);
+
+  // Store app URL for message building
+  window._gtcAppUrl = appUrl;
+
+  // Init radio label styles
+  onSendModeChange();
+  actualizarVistaPrevia();
+}
+
+function onSendModeChange() {
+  const modo = document.querySelector('input[name="nu-envio"]:checked')?.value || 'ninguno';
+  ['ninguno','ambos','whatsapp','email'].forEach(v => {
+    const lbl = document.getElementById(`lbl-send-${v}`);
+    if (!lbl) return;
+    const active = v === modo;
+    lbl.style.borderColor  = active ? 'var(--accent)'      : 'var(--border-light)';
+    lbl.style.background   = active ? 'var(--accent-glow)' : 'transparent';
+  });
+  const preview = document.getElementById('send-preview');
+  if (preview) preview.style.display = modo === 'ninguno' ? 'none' : 'block';
+  const btn = document.getElementById('btn-crear-usuario');
+  if (btn) btn.textContent = modo === 'ninguno' ? 'Crear Usuario' : 'Crear y Enviar →';
+  actualizarVistaPrevia();
+}
+
+function actualizarVistaPrevia() {
+  const preview = document.getElementById('send-preview-text');
+  if (!preview) return;
+  const nombre = document.getElementById('nu-nombre')?.value.trim() || 'Usuario';
+  const pass   = document.getElementById('nu-pass')?.value.trim()   || '1234';
+  const url    = window._gtcAppUrl || window.location.href;
+  const modo   = document.querySelector('input[name="nu-envio"]:checked')?.value || 'ninguno';
+  if (modo === 'ninguno') return;
+  const msg = buildAccesoMsg(nombre, pass, url, modo);
+  preview.textContent = msg;
+}
+
+function buildAccesoMsg(nombre, pass, url, modo) {
+  if (modo === 'email') {
+    return `Estimado/a ${nombre},\n\nTe damos acceso al sistema GTC — Gestión de Tarjetas de Crédito.\n\n🔗 Link de acceso:\n${url}\n\n🔑 Tus credenciales:\n• Usuario: [tu correo registrado]\n• Contraseña temporal: ${pass}\n\nTe recomendamos cambiar tu contraseña al ingresar por primera vez.\n\nSaludos,\nEquipo de Finanzas`;
+  }
+  return `Hola ${nombre} 👋\n\nYa tienes acceso al sistema *GTC — Tarjetas de Crédito*.\n\n🔗 *Link de acceso:*\n${url}\n\n🔑 *Tus credenciales:*\n• Usuario: tu correo registrado\n• Contraseña temporal: *${pass}*\n\nÁbrelo desde tu móvil o computadora. Si tienes dudas, contacta a Finanzas.`;
+}
+
+function crearUsuario() {
+  const nombre   = document.getElementById('nu-nombre').value.trim();
+  const email    = document.getElementById('nu-email').value.trim().toLowerCase();
+  const whatsapp = document.getElementById('nu-whatsapp').value.trim();
+  const pass     = document.getElementById('nu-pass').value.trim();
+  const rol      = document.getElementById('nu-rol').value;
+  const modo     = document.querySelector('input[name="nu-envio"]:checked')?.value || 'ninguno';
+  const err      = document.getElementById('nu-error');
+
+  if (!nombre)  { err.textContent = 'Ingrese el nombre.'; return; }
+  if (!email)   { err.textContent = 'Ingrese el correo.'; return; }
+  if (DB.getUserByEmail(email)) { err.textContent = 'Correo ya registrado.'; return; }
+  if (!pass)    { err.textContent = 'Ingrese una contraseña temporal.'; return; }
+  if ((modo === 'whatsapp' || modo === 'ambos') && !whatsapp) {
+    err.textContent = 'Para enviar por WhatsApp ingresa el número del usuario.'; return;
+  }
+
+  const us = DB.getUsuarios();
+  const id = 'u' + Date.now();
+  DB.saveUsuario({ id, nombre, email, whatsapp, password: pass, rol, activo: true });
+
+  const url = window._gtcAppUrl || window.location.href;
+
+  // Send via selected channel
+  if (modo === 'whatsapp' || modo === 'ambos') {
+    const waMsg = buildAccesoMsg(nombre, pass, url, 'whatsapp');
+    const waNum = whatsapp.replace(/\D/g, '');
+    window.open(`https://wa.me/${waNum}?text=${encodeURIComponent(waMsg)}`, '_blank');
+  }
+  if (modo === 'email' || modo === 'ambos') {
+    const emailMsg  = buildAccesoMsg(nombre, pass, url, 'email');
+    const asunto    = encodeURIComponent('Acceso al sistema GTC — Gestión de Tarjetas de Crédito');
+    const cuerpo    = encodeURIComponent(emailMsg);
+    window.open(`mailto:${email}?subject=${asunto}&body=${cuerpo}`, '_blank');
+  }
+
+  closeModal();
+  const modoLabel = { ninguno:'creado', whatsapp:'creado y notificado por WhatsApp', email:'creado y notificado por correo', ambos:'creado y notificado por WhatsApp y correo' };
+  toast(`Usuario ${modoLabel[modo] || 'creado'} ✅`, 'success');
+  routeTo('usuarios');
+}
+
+function modalEditarUsuario(id) {
+  const u = DB.getUsuario(id);
+  openModal(`<div class="modal" style="max-width:480px;">
+    <div class="modal-header"><span class="modal-title">✏️ Editar Usuario</span><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Nombre <span class="req">*</span></label><input type="text" id="eu-nombre" class="form-control" value="${u.nombre}"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Correo electrónico <span class="req">*</span></label>
+          <input type="email" id="eu-email" class="form-control" value="${u.email}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">WhatsApp</label>
+          <input type="tel" id="eu-whatsapp" class="form-control" value="${u.whatsapp||''}" placeholder="+51999888777">
+          <div class="form-hint">Incluir código de país</div>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Rol <span class="req">*</span></label>
+        <select id="eu-rol" class="form-control">
+          <option value="solicitante" ${u.rol==='solicitante'?'selected':''}>Solicitante</option>
+          <option value="finanzas" ${u.rol==='finanzas'?'selected':''}>Finanzas</option>
+          <option value="admin" ${u.rol==='admin'?'selected':''}>Administrador</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="guardarUsuario('${id}')">Guardar</button>
+    </div>
+  </div>`);
+}
+
+function guardarUsuario(id) {
+  const u = DB.getUsuario(id);
+  u.nombre   = document.getElementById('eu-nombre').value.trim();
+  u.email    = document.getElementById('eu-email').value.trim().toLowerCase();
+  u.whatsapp = document.getElementById('eu-whatsapp').value.trim();
+  u.rol      = document.getElementById('eu-rol').value;
+  DB.saveUsuario(u);
+  closeModal();
+  toast('Usuario actualizado ✅', 'success');
+  routeTo('usuarios');
+}
+
+function toggleUsuario(id) {
+  const u = DB.getUsuario(id);
+  u.activo = !u.activo;
+  DB.saveUsuario(u);
+  toast(`Usuario ${u.activo ? 'activado' : 'desactivado'}`, u.activo ? 'success' : 'warning');
+  routeTo('usuarios');
+}
+
+function confirmarEliminarUsuario(id, nombre) {
+  openModal(`<div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <span class="modal-title">🗑 Eliminar Usuario</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--red-bg);border:1px solid var(--red);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
+        <p style="font-size:13px;color:var(--red);font-weight:700;">⚠️ Esta acción no se puede deshacer</p>
+        <p style="font-size:12px;color:var(--text-label);margin-top:4px;">El usuario <strong>${nombre}</strong> será eliminado permanentemente del sistema.</p>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);">Las solicitudes registradas por este usuario se conservarán en el historial.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${id}')">🗑 Sí, eliminar</button>
+    </div>
+  </div>`);
+}
+
+function eliminarUsuario(id) {
+  const list = DB.getUsuarios().filter(u => u.id !== id);
+  localStorage.setItem(DB.KEYS.USUARIOS, JSON.stringify(list));
+  closeModal();
+  toast('Usuario eliminado', 'error');
+  routeTo('usuarios');
+}
+
+/* ══════════════════════════════════════════════════════
+   KEYBOARD SHORTCUT & INIT
+   ══════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// Initialize DB with seed data
+DB.init();
+
+// Boot: auto-login if session exists, otherwise show login screen
+const existingSession = DB.getSession();
+if (existingSession) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  initApp(existingSession);
+}
+
+</script>
+</body>
+</html>
